@@ -46,8 +46,12 @@ def find_si_bl(email: dict) -> AttachmentResolutionResult:
             bl_candidates.append(path)
 
     if len(si_candidates) > 1 or len(bl_candidates) > 1:
+        # More than one candidate = can't safely pick one, functionally the
+        # same problem as not having one at all -- mapped to
+        # "missing_attachment" since that's one of the 4 reasons the
+        # evaluation format actually accepts.
         return AttachmentResolutionResult(
-            review_required=True, review_reason="ambiguous_attachments",
+            review_required=True, review_reason="missing_attachment",
             warnings=[f"SI candidates: {si_candidates}", f"BL candidates: {bl_candidates}"],
         )
 

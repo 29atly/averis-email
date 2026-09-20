@@ -11,13 +11,13 @@ from pydantic import BaseModel, Field
 CATEGORIES = ["BL_COMPARISON", "SI_REQUEST", "INVOICE_QUERY", "GENERAL", "SPAM"]
 STATUSES = ["OK", "MISMATCH", "NEEDS_REVIEW"]
 
-# "ambiguous_attachments" added after Person 2's review: find_si_bl() needs
-# to be able to say "found multiple BL candidates, can't pick safely" --
-# distinct from a plain missing attachment or a wrong document type.
+# The 4 review reasons the evaluation format actually accepts (per your
+# bundle's README.md) -- do not add to this list without confirming the
+# scorer supports it. Anything more specific gets mapped down to one of
+# these before it reaches submission.json.
 REVIEW_REASONS = [
     "wrong_doc_type",
     "missing_attachment",
-    "ambiguous_attachments",
     "unreadable",
     "missing_value",
 ]

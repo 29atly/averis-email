@@ -19,7 +19,18 @@ def run_pipeline(loader, email: dict) -> PipelineResult:
     if category != "BL_COMPARISON":
         return PipelineResult(email_id=eid, category=category, status=None)
 
-    si_path, bl_path = classification.find_si_bl(email)
+    try:
+        resolution = classification.find_si_bl(email)
+    except Exception as e:
+        return PipelineResult(email_id=eid, category=category, status="NEEDS_REVIEW",
+                               review_reason="unreadable", error=f"find_si_bl failed: {e}")
+
+    if resolution.review_required:
+        detail = {"warnings": resolution.warnings} if resolution.warnings else {}
+        return PipelineResult(email_id=eid, category=category, status="NEEDS_REVIEW",
+                               review_reason=resolution.review_reason, diff_detail=detail)
+
+    si_path, bl_path = resolution.si_path, resolution.bl_path
     if not si_path or not bl_path:
         return PipelineResult(email_id=eid, category=category, status="NEEDS_REVIEW",
                                review_reason="missing_attachment")

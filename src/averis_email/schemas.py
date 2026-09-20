@@ -1,14 +1,8 @@
-"""Shared data contracts for the pipeline -- now real Pydantic models.
+"""Shared data contracts for the pipeline -- Pydantic models.
 
 Every stage module in `averis_email.stages` should accept/return objects
-shaped like these. Using Pydantic (rather than plain dataclasses) means:
-  - values get validated automatically (e.g. a wrong type raises a clear
-    error immediately, instead of silently corrupting data downstream)
-  - FastAPI (in web.py) can use these directly to auto-generate API docs
-    and validate responses
-
-Agree on this file with the whole team before anyone writes real stage
-logic -- it's the contract everything else plugs into.
+shaped like these. Agree on this file with the whole team before anyone
+writes real stage logic -- it's the contract everything else plugs into.
 """
 from typing import Any, Optional
 
@@ -16,7 +10,17 @@ from pydantic import BaseModel, Field
 
 CATEGORIES = ["BL_COMPARISON", "SI_REQUEST", "INVOICE_QUERY", "GENERAL", "SPAM"]
 STATUSES = ["OK", "MISMATCH", "NEEDS_REVIEW"]
-REVIEW_REASONS = ["wrong_doc_type", "missing_attachment", "unreadable", "missing_value"]
+
+# "ambiguous_attachments" added after Person 2's review: find_si_bl() needs
+# to be able to say "found multiple BL candidates, can't pick safely" --
+# distinct from a plain missing attachment or a wrong document type.
+REVIEW_REASONS = [
+    "wrong_doc_type",
+    "missing_attachment",
+    "ambiguous_attachments",
+    "unreadable",
+    "missing_value",
+]
 
 FIELDS = [
     "shipper",
@@ -32,24 +36,39 @@ FIELDS = [
 class FieldValue(BaseModel):
     """One extracted field, with evidence so a human reviewer can check it."""
     value: Optional[str] = None
-    source_file: Optional[str] = None   # e.g. "attachments/email_004_SI.txt"
-    source_page: Optional[int] = None   # page number, for pdf/docx/scan later
-    raw_text: Optional[str] = None      # the raw snippet the value came from
+    source_file: Optional[str] = None
+    source_page: Optional[int] = None
+    raw_text: Optional[str] = None
 
 
 class ExtractedDoc(BaseModel):
     """Everything pulled from one SI or BL attachment.
 
-    `fields` is intentionally typed loosely (dict[str, Any]) because stage 2
-    (ingestion) temporarily stores raw text under "_raw" before stage 3
-    (extraction) replaces it with real FieldValue entries keyed by the names
-    in FIELDS.
+    `fields` is typed loosely (dict[str, Any]) because stage 2 (ingestion)
+    temporarily stores raw text under "_raw" before stage 3 (extraction)
+    replaces it with real FieldValue entries keyed by the names in FIELDS.
     """
     attachment_path: str
-    doc_type: Optional[str] = None      # "SI" | "BL" | None if undetermined
+    doc_type: Optional[str] = None
     fields: dict[str, Any] = Field(default_factory=dict)
     readable: bool = True
     error: Optional[str] = None
+
+
+class AttachmentResolutionResult(BaseModel):
+    """What stage 2's find_si_bl() returns -- richer than a bare
+    (si_path, bl_path) tuple so it can explain WHY an attachment couldn't
+    be resolved cleanly, not just that it couldn't.
+
+    Only relevant for emails already classified as BL_COMPARISON --
+    classification (deciding the category itself) stays classify_email()'s
+    job, not this one's.
+    """
+    si_path: Optional[str] = None
+    bl_path: Optional[str] = None
+    review_required: bool = False
+    review_reason: Optional[str] = None  # one of REVIEW_REASONS, or None
+    warnings: list[str] = Field(default_factory=list)  # human-readable notes
 
 
 class PipelineResult(BaseModel):

@@ -7,6 +7,7 @@ __pycache__/
 .DS_Store
 submission.json
 outputs/
+.cache/
 /Averis Hackathon Instruction/sdoc-hackathon-docker/data_v2/inbox/
 /Averis Hackathon Instruction/sdoc-hackathon-docker/data_v2/attachments/
 /Averis Hackathon Instruction/sdoc-hackathon-docker/data_v2/*.json

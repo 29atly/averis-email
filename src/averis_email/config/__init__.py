@@ -1,1 +1,1 @@
-"""Centralized extraction configuration."""
+"""Centralized classification and extraction configuration."""

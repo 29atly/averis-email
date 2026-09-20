@@ -4,6 +4,7 @@ read. This is the piece that makes five people's separate files into one
 working pipeline; it should stay boring and defensive on purpose.
 """
 from averis_email.schemas import PipelineResult
+from averis_email.classifier import classify_email
 from averis_email.stages import classification, ingestion, extraction, validation, comparison
 
 
@@ -21,10 +22,20 @@ def run_pipeline(loader, email: dict) -> PipelineResult:
     eid = email["email_id"]
 
     try:
-        category = classification.classify_email(email)
+        decision = classify_email(email)
     except Exception as e:
         return PipelineResult(email_id=eid, category="GENERAL", status="NEEDS_REVIEW",
                                review_reason="unreadable", error=f"classify failed: {e}")
+
+    if decision.review_required:
+        # The submission contract requires a category and one of four reasons.
+        # Keep the actual abstention (including null category and detailed reason)
+        # in diff_detail; GENERAL is only the legacy submission placeholder.
+        return PipelineResult(email_id=eid, category="GENERAL", status="NEEDS_REVIEW",
+                              review_reason="unreadable",
+                              diff_detail={"classification": decision.details})
+
+    category = decision.category
 
     if category != "BL_COMPARISON":
         return PipelineResult(email_id=eid, category=category, status=None)

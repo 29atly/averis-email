@@ -10,6 +10,8 @@ from google.genai import types
 from pydantic import BaseModel, Field
 
 from averis_email.schemas import ExtractedDoc, FieldValue, FIELDS
+# Preserve the public PDF API used by the file routing pipeline and CLI.
+from averis_email.stages.pdf_extraction import Word, extract_page, extract_pdf, main
 
 
 # Load GEMINI_API_KEY from .env 
@@ -849,3 +851,6 @@ def extract_fields(doc: ExtractedDoc,) -> ExtractedDoc:
     doc.fields = extracted
 
     return doc
+
+if __name__ == "__main__":
+    main()

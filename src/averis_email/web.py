@@ -32,7 +32,7 @@ app.add_middleware(
 
 # Change "data" to wherever you extracted the bundle, or point this at the
 # docker server instead: Inbox("http://localhost:8080")
-INBOX = Inbox("/Users/ongwx/hack/sdoc-hackathon-bundle")
+INBOX = Inbox("data")
 
 
 @app.get("/health")

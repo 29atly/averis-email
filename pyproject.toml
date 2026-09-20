@@ -8,8 +8,7 @@ version = "0.1.0"
 description = "Starter pipeline for email document comparison"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = [
-]
+dependencies = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

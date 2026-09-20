@@ -148,25 +148,26 @@ def classify_email(email: dict) -> str:
             or _intent(_normalize(email.get('subject') or '')) or 'GENERAL')
 
 
-def _filename_roles(path):
-    """Identify possible SI/BL roles from an attachment filename.
-
-    This function only examines the filename. It does not open the
-    document or verify its actual contents.
-    """
+def _filename_text(path):
+    """Normalize the basename for matching without altering the source path."""
     # Extract only the filename without its directory or extension.
     stem = PurePosixPath(path.replace('\\', '/')).stem
     # Add spaces between common camel-case patterns.
     stem = re.sub(r'([a-z])([A-Z])', r'\1 \2', stem)
     stem = re.sub(r'([A-Z])([A-Z][a-z])', r'\1 \2', stem)
     # Convert punctuation/separators to spaces and normalize case.
-    name = re.sub(r'[^a-z0-9]+', ' ', stem.lower())
+    return re.sub(r'[^a-z0-9]+', ' ', stem.lower())
+
+
+def _filename_roles(path):
+    """Infer candidate roles from the filename, not document contents."""
+    name = _filename_text(path)
     roles = set()
     # Identify filenames that look like Shipping Instructions.
     if re.search(r'\bsi(?:\d+)?\b|\bshipping\s*instructions?\b', name):
         roles.add('SI')
     # Identify filenames that look like Bill of Lading.
-    if re.search(r'\bbl(?:\d+)?\b|\bb\s+l\b|\bbill\s*of\s*lading\b', name):
+    if re.search(r'\b(?:draft\s*)?bl(?:\d+)?\b|\bb\s+l\b|\bbill\s*of\s*lading\b', name):
         roles.add('BL')
 
     return roles
@@ -191,6 +192,7 @@ def find_si_bl(email: dict) -> AttachmentResolutionResult:
     candidates = {'SI': [], 'BL': []}
     warnings, seen = [], set()
     ambiguous = False
+    conflicting_type = False
     for path in attachments:
          # Ignore malformed or empty attachment paths.
         if not isinstance(path, str) or not path.strip():
@@ -202,6 +204,12 @@ def find_si_bl(email: dict) -> AttachmentResolutionResult:
         seen.add(path)
         # Determine whether the filename looks like an SI or BL.
         roles = _filename_roles(path)
+        # Conflicting filename clues require review; this is not a content
+        # verification. Keep the exact filename in warnings for the reviewer.
+        if roles and re.search(r'\b(?:commercial\s*)?invoice\b|\bpacking\s*list\b|\bcertificate\s*of\s*origin\b', _filename_text(path)):
+            conflicting_type = True
+            warnings.append(f'Conflicting document-type clues in filename (content unverified): {path}')
+            continue
          # A filename matching both roles is ambiguous and cannot
         # be safely resolved automatically.
         if len(roles) > 1:
@@ -223,7 +231,8 @@ def find_si_bl(email: dict) -> AttachmentResolutionResult:
         elif len(paths) > 1:
             warnings.append(f'Multiple {role} candidates: {paths}')
     # Human review is required when: an attachment is ambiguous, SI could not be uniquely resolved, or BL could not be uniquely resolved.
-    review = ambiguous or not resolved['SI'] or not resolved['BL']
+    review = conflicting_type or ambiguous or not resolved['SI'] or not resolved['BL']
+    reason = 'wrong_doc_type' if conflicting_type else 'missing_attachment'
     return AttachmentResolutionResult(si_path=resolved['SI'], bl_path=resolved['BL'],
-        review_required=bool(review), review_reason='missing_attachment' if review else None,
+        review_required=bool(review), review_reason=reason if review else None,
         warnings=warnings)

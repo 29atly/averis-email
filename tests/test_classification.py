@@ -115,6 +115,36 @@ class EmailIntelligenceTests(unittest.TestCase):
                 self.assertEqual((result.si_path, result.bl_path), (si, bl))
                 self.assertFalse(result.review_required)
 
+    def test_compact_draft_bl_case_variants(self):
+        for name in ['DRAFTBL.pdf', 'draftbl.pdf', 'DraftBL.pdf', 'DRAFTBL_123.PDF']:
+            with self.subTest(name=name):
+                result = find_si_bl(dict(attachments=['SI.xlsx', name]))
+                self.assertFalse(result.review_required)
+                self.assertEqual(result.bl_path, name)
+
+    def test_conflicting_document_filename(self):
+        for name in ['BL_commercial_invoice.pdf', 'BL_PackingList.xlsx',
+                     'BL_certificate_of_origin.pdf', 'SI_invoice.pdf']:
+            with self.subTest(name=name):
+                result = find_si_bl(dict(attachments=['SI.pdf', 'BL.pdf', name]))
+                self.assertTrue(result.review_required)
+                self.assertEqual(result.review_reason, 'wrong_doc_type')
+                self.assertTrue(any(name in warning for warning in result.warnings))
+
+    def test_conflicting_candidate_not_selected(self):
+        result = find_si_bl(dict(attachments=['SI.pdf', 'BL_commercial_invoice.pdf']))
+        self.assertEqual(result.si_path, 'SI.pdf')
+        self.assertIsNone(result.bl_path)
+        self.assertTrue(result.review_required)
+
+    def test_unrelated_invoice_and_parent_directory_do_not_conflict(self):
+        result = find_si_bl(dict(attachments=['invoice/SI.pdf', 'packing_list/BL.pdf', 'CommercialInvoice.pdf']))
+        self.assertFalse(result.review_required)
+        self.assertEqual(result.bl_path, 'packing_list/BL.pdf')
+        result = find_si_bl(dict(attachments=['SI.pdf', 'notdraftbl.pdf']))
+        self.assertTrue(result.review_required)
+        self.assertIsNone(result.bl_path)
+
     def test_missing_or_ambiguous(self):
         """Verify that missing or ambiguous SI/BL attachments require human review."""
         for paths in [[], ['SI.pdf'], ['BL.pdf'], ['SI.pdf', 'BL_v1.pdf', 'BL_v2.pdf'], ['SI_BL.pdf']]:

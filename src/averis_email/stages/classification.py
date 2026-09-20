@@ -12,9 +12,10 @@ find_si_bl(email: dict) -> AttachmentResolutionResult
     Only called for emails already classified as BL_COMPARISON. Must
     explain what it found, not just hand back two paths:
       - si_path / bl_path: the resolved paths, or None if not found
-      - review_required + review_reason: set True with a reason
-        ("missing_attachment", "ambiguous_attachments", "wrong_doc_type")
-        whenever the attachments can't be resolved safely
+      - review_required + review_reason: set True with a reason from
+        schemas.REVIEW_REASONS ("missing_attachment", "wrong_doc_type",
+        "unreadable", "missing_value") whenever the attachments can't be
+        resolved safely
       - warnings: human-readable notes for the report/review UI, e.g.
         "2 BL candidates found: draft_bl_v1.pdf, draft_bl_v2.pdf"
 

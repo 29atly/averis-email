@@ -55,6 +55,55 @@ class EmailIntelligenceTests(unittest.TestCase):
             with self.subTest(body=body):
                 self.assertEqual(classify_email(dict(body=body)), 'SPAM')
 
+    def test_bank_proposal_scam(self):
+        """Regression for participant email_226, labeled by manual review."""
+        email = {
+            'subject': 'Exclusive offer: 90% OFF premium logistics software this week only',
+            'body': 'Hello Dear, I am a bank officer with an urgent business proposal involving USD 4.5 million. Please reply with your bank details to proceed.',
+        }
+        self.assertEqual(classify_email(email), 'SPAM')
+
+    def test_legitimate_bank_correspondence(self):
+        """Bank details alone, or a proposal alone, must not trigger spam."""
+        cases = [
+            ('Invoice payment', 'Please reply with your bank details for payment of invoice 42.', 'INVOICE_QUERY'),
+            ('Bank meeting', 'Our bank officer will attend the meeting tomorrow.', 'GENERAL'),
+            ('Business proposal', 'Please review our business proposal involving USD 4.5 million for warehouse construction.', 'GENERAL'),
+            ('Invoice update', 'Our bank officer confirmed payment of invoice 42.', 'INVOICE_QUERY'),
+        ]
+        for subject, body, expected in cases:
+            with self.subTest(subject=subject):
+                self.assertEqual(classify_email(dict(subject=subject, body=body)), expected)
+
+    def test_quoted_bank_scam_does_not_override_current_invoice(self):
+        body = ('Please clarify invoice 42.\nFrom: unknown sender\n'
+                'I am a bank officer with an urgent business proposal involving USD 4.5 million. '
+                'Please reply with your bank details to proceed.')
+        self.assertEqual(classify_email(dict(body=body)), 'INVOICE_QUERY')
+
+    def test_billing_completion_notices(self):
+        cases = [
+            'This is an automated notification. The India HSS SD Billing Process for MARCOPOLO 810 V.BS005 has completed successfully. No action required.',
+            'Automated notification: billing process for Vessel A completed successfully. No further action is required.',
+        ]
+        for body in cases:
+            with self.subTest(body=body):
+                self.assertEqual(classify_email(dict(subject='Billing update', body=body)), 'GENERAL')
+
+    def test_actionable_billing_is_not_completion_only(self):
+        cases = [
+            'Automated notification: billing process failed. Please retry.',
+            'Billing process completed. Invoice 42 is disputed. Please investigate.',
+            'Billing process completed successfully. No action required for this run. However, GR is missing for invoice 42.',
+            'Billing process completed successfully. No action required for this run. Please pay invoice 42.',
+            'Billing process has not completed successfully. No action required until support responds.',
+            'Could you confirm whether the billing process completed successfully? No action required until confirmed.',
+            'Invoice 42 has the wrong amount. Please correct it.',
+        ]
+        for body in cases:
+            with self.subTest(body=body):
+                self.assertEqual(classify_email(dict(body=body)), 'INVOICE_QUERY')
+
     def test_formats_and_paths(self):
         """Verify that SI and BL attachments are correctly identified across filename formats and paths."""
         for si, bl in [('attachments/email_004_SI.txt', 'attachments/email_004_BL.txt'),

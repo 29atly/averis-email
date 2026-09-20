@@ -87,12 +87,25 @@ def _intent(text):
     if not text:
         return None
     # Detect common spam/scam patterns first.
+    # Require the combined proposal, claimed bank role, and solicitation;
+    # ordinary invoice payment/bank-detail correspondence is not enough.
+    if (re.search(r'\bbank officer\b', text)
+            and re.search(r'\burgent business proposal\b', text)
+            and re.search(r'\b(?:reply|respond|send|provide|share)\b[^.!?]{0,80}\byour bank (?:details|information)\b', text)):
+        return 'SPAM'
     if re.search(r'claim your.{0,30}gift card|monthly draw|package.{0,60}unpaid customs fee', text):
         return 'SPAM'
     if re.search(r'\b(lottery|viagra|you (?:have )?won|claim your prize|one weird trick)\b|mailbox.{0,60}(?:full|limit|exceeded)|verify your account.{0,80}(?:deactivation|suspend)|limited time offer|\bbuy now\b|\bparcel.{0,40}(?:fee|payment)', text):
         return 'SPAM'
+    # Completion notices may contain vessel names between process and outcome.
+    # Require success AND no action, and keep failures/questions/requests out.
+    if (re.search(r'\bbilling process\b', text)
+            and re.search(r'\bcompleted successfully\b', text)
+            and re.search(r'\bno (?:further )?action (?:is )?required\b', text)
+            and not re.search(r'\b(not|never|failed|failure|error|missing|disput\w*|wrong|incorrect|please|kindly|however)\b|\?', text)):
+        return 'GENERAL'
     # Some operational/business emails are explicitly treated as GENERAL.
-    if re.search(r'\b(berthing report|update summary|outstanding (?:bl|list)|billing process completed|holiday|delivery planning)\b|submit si\s*&\s*aed', text):
+    if re.search(r'\b(berthing report|update summary|outstanding (?:bl|list)|holiday|delivery planning)\b|submit si\s*&\s*aed', text):
         return 'GENERAL'
 
     # Match common ways of referring to a Bill of Lading.

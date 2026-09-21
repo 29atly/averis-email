@@ -74,7 +74,7 @@
     main.removeAttribute('aria-busy');
     await script('app.js');
     if (!selected && !['inbox', 'review', 'settings'].includes(module)) {
-      main.innerHTML = '<div class="empty">No case is available for this view. <a href="index.html">Open the work queue</a>.</div>';
+      main.innerHTML = '<div class="empty">No case is available for this view. <a href="index.html">Open the inbox</a>.</div>';
     } else if (module !== 'review') {
       await script(`${module}.js`);
     }

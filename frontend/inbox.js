@@ -1,7 +1,7 @@
 (function () {
   const { cases, categoryLabels, getDifferences, selectCase } = window.ShippingStore;
   const params = new URLSearchParams(location.search);
-  let filter = params.get('view') === 'completed' ? 'completed' : 'all';
+  let filter = 'all';
   const rows = document.getElementById('emailRows');
   const table = document.querySelector('.email-table');
   const search = document.getElementById('globalSearch');
@@ -15,10 +15,12 @@
   const bulkProgress = document.getElementById('bulkProgress');
   const bulkProgressFill = document.getElementById('bulkProgressFill');
   document.getElementById('queueOverview').innerHTML = [
-    ['index.html', 'In the mailroom', cases.length],
-    ['review.html', 'Needs your attention', cases.filter(item => item.status === 'review').length],
-    ['index.html?view=completed', 'Completed', cases.filter(item => item.status === 'complete').length]
-  ].map(([href, label, total]) => `<a class="overview-item" href="${href}"><span>${label}</span><strong>${total}</strong></a>`).join('');
+    { label: 'In the inbox', total: cases.length },
+    { href: 'review.html', label: 'Needs your attention', total: cases.filter(item => item.status === 'review').length },
+    { label: 'Completed', total: cases.filter(item => item.status === 'complete').length }
+  ].map(item => item.href
+    ? `<a class="overview-item" href="${item.href}"><span>${item.label}</span><strong>${item.total}</strong></a>`
+    : `<div class="overview-item overview-item-static"><span>${item.label}</span><strong>${item.total}</strong></div>`).join('');
   const requestedSearch = params.get('search') || '';
   search.value = requestedSearch;
 
@@ -44,7 +46,6 @@
       if (!badge) return;
       if (link.getAttribute('href') === 'index.html') badge.textContent = cases.length;
       if (link.getAttribute('href') === 'review.html') badge.textContent = cases.filter(item => item.status === 'review').length;
-      if (link.getAttribute('href') === 'index.html?view=completed') badge.textContent = cases.filter(item => item.status === 'complete').length;
     });
   }
 
@@ -63,13 +64,11 @@
   }
 
   function render() {
-    document.getElementById('queueTitle').textContent = filter === 'completed' ? 'Completed cases' : 'Work queue';
+    document.getElementById('queueTitle').textContent = 'Inbox';
     const query = search.value.trim().toLowerCase();
     visible = cases.filter(item => {
       const matchesSearch = `${item.id} ${item.subject} ${item.sender} ${item.body}`.toLowerCase().includes(query);
-      const matchesFilter = filter === 'all' ||
-        filter === item.category ||
-        (filter === 'completed' && item.status === 'complete');
+      const matchesFilter = filter === 'all' || filter === item.category;
       return matchesSearch && matchesFilter;
     });
 
@@ -302,8 +301,5 @@
     }
   });
 
-  if (filter === 'completed') {
-    document.querySelectorAll('[data-filter]').forEach(item => item.classList.remove('active'));
-  }
   render();
 })();

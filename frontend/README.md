@@ -4,7 +4,7 @@ The frontend is connected to the FastAPI backend. It includes the inbox, origina
 message and attachment downloads, seven-field SI/BL comparison, source evidence,
 human review, retry and activity history.
 
-From the work queue, **Compose email** opens a form for a manually written
+From the inbox, **Compose email** opens a form for a manually written
 subject, content and attachments (PDF, XLSX, TXT, DOCX); submitting persists it
 and runs the pipeline, then returns to the queue with the new case at the top.
 Each row also has a checkbox, with a header checkbox to select all currently
@@ -27,13 +27,13 @@ Manually composed emails and their attachments are kept under
 Open **Gmail Inbox Settings** in the left module bar to connect a dedicated Gmail
 account with a Google app password. When automatic reading is enabled, the server
 checks the inbox every 60 seconds and adds messages received after enablement to the
-work queue as pending cases. The first check establishes a mailbox baseline and does
+inbox as pending cases. The first check establishes a mailbox baseline and does
 not import historical mail. Server-sent events refresh the queue when new mail is
 stored. Set `AVERIS_GMAIL_POLL=0` to disable polling or
 `AVERIS_GMAIL_POLL_INTERVAL` to change the successful-cycle interval.
 
 The inbox loads without inference. Opening a message processes it once and saves
-the result; retry runs it again. Review and completed filters include processed
+the result; retry runs it again. Review filters include processed
 cases. Missing dates, recipients and source evidence are left blank.
 
 For a separate static server:

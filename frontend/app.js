@@ -2,24 +2,19 @@
   const icons = {
     queue: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4z"/><path d="m4 6 8 7 8-7"/></svg>',
     review: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4h10v17H7z"/><path d="M9 4V2h6v2M9.5 12l2 2 4-5"/></svg>',
-    complete: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>',
     history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6"/><path d="M4 4v4.6h4.6M12 7v5l3 2"/></svg>',
     settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>'
   };
   const active = document.body.dataset.module;
-  const params = new URLSearchParams(location.search);
-  const listView = params.get('view');
   const selected = window.ShippingStore?.getCase();
   const reviewCount = window.ShippingStore?.cases.filter(item => item.status === 'review').length || 0;
-  const completedCount = window.ShippingStore?.cases.filter(item => item.status === 'complete').length || 0;
   const modules = [
-    { id: 'inbox', href: 'index.html', icon: icons.queue, label: 'Work Queue', count: window.ShippingStore?.cases.length || 0 },
+    { id: 'inbox', href: 'index.html', icon: icons.queue, label: 'Inbox', count: window.ShippingStore?.cases.length || 0 },
     { id: 'review', href: 'review.html', icon: icons.review, label: 'Needs Human Review', count: reviewCount },
-    { id: 'completed', href: 'index.html?view=completed', icon: icons.complete, label: 'Completed Cases', count: completedCount },
     { id: 'activity', href: `activity.html${selected ? `?case=${encodeURIComponent(selected.id)}` : ''}`, icon: icons.history, label: 'Activity History', count: '' },
     { id: 'settings', href: 'settings.html', icon: icons.settings, label: 'Gmail Inbox Settings', count: '' }
   ];
-  const navigationActive = active === 'inbox' && listView === 'completed' ? 'completed' : active === 'message' || active === 'comparison' || active === 'evidence' ? 'inbox' : active;
+  const navigationActive = active === 'message' || active === 'comparison' || active === 'evidence' ? 'inbox' : active;
 
   document.getElementById('sidebar').innerHTML = `
     <div class="brand">

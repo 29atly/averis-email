@@ -21,7 +21,7 @@
 
   container.innerHTML = `
     <div class="message-toolbar">
-      <a class="icon-link" href="index.html" aria-label="Back to Work Queue">← <span>Back to Work Queue</span></a>
+      <a class="icon-link" href="index.html" aria-label="Back to Inbox">← <span>Back to Inbox</span></a>
       <span class="message-index">${escapeHTML(item.id)}</span>
     </div>
     <article class="message-article">

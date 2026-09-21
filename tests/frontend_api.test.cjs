@@ -48,6 +48,8 @@ test('queue loads API data before rendering and does not process the inbox', asy
   const result = await boot('inbox', [{ ...item, status: 'pending', category: 'unclassified' }]);
   assert.deepEqual(result.scripts, ['app.js', 'inbox.js']);
   assert.equal(result.requests.length, 1);
+  assert.match(result.elements.get('sidebar').innerHTML, />Inbox</);
+  assert.doesNotMatch(result.elements.get('sidebar').innerHTML, /Completed Cases|view=completed/);
   assert.match(result.elements.get('emailRows').innerHTML, /Open to process/);
   assert.doesNotMatch(result.elements.get('emailRows').innerHTML, /<img/);
 });

@@ -59,10 +59,10 @@ This supports both local and HTTP-backed Inbox loaders. The temporary file is
 removed after extraction, while the original attachment path is retained in the
 `ExtractedDoc` returned to the email pipeline.
 
-Adapters return `raw_text` alongside their format-specific field occurrences.
-Ingestion passes that text under `_raw` to the existing semantic field extractor,
-which retains its rule/Gemini behavior. The standalone file API returns the
-format-specific extraction results directly. Non-EXTRACTED outcomes and empty
+Adapters return raw text only (`raw_text`, plus `text_by_page` and
+`pages_without_text` for PDFs). Ingestion passes that text under `_raw` to the
+semantic field extractor in `stages.extraction`, which owns rule/Gemini field
+extraction. The standalone file API returns the raw-text result directly. Non-EXTRACTED outcomes and empty
 text mark the attachment unreadable, preventing partial OCR from being reported
 as a successful comparison.
 

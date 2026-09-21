@@ -61,7 +61,7 @@ class OCRExtractionTests(unittest.TestCase):
             self._insert_scan(document.new_page())
             document.save(self.path)
 
-    def test_scanned_pdf_uses_word_boxes_and_existing_keyword_window(self):
+    def test_scanned_pdf_returns_recognized_lines_as_raw_text(self):
         self._create_pdf()
         engine = FakePaddleOCR([[
             ("Shipper: Scanned Company", 0.99),
@@ -70,13 +70,10 @@ class OCRExtractionTests(unittest.TestCase):
 
         result = extract_ocr_pdf(self.path, engine=engine)
 
-        self.assertEqual(result["fields"]["shipper"], "Scanned Company")
-        self.assertEqual(result["fields"]["port_of_loading"], "Singapore")
+        self.assertEqual(result["raw_text"], "Shipper: Scanned Company\nPort of Loading: Singapore")
+        self.assertEqual(result["text_by_page"], [result["raw_text"]])
         self.assertEqual(result["pages_without_text"], [])
-        self.assertEqual(
-            [word["text"] for word in result["occurrences"][0]["value_words"]],
-            ["Scanned", "Company"],
-        )
+        self.assertNotIn("fields", result)
         self.assertEqual(engine.calls[0][1]["text_rec_score_thresh"], 0.5)
         self.assertEqual(engine.calls[0][0][2], 3)
 
@@ -87,9 +84,9 @@ class OCRExtractionTests(unittest.TestCase):
         result = extract_ocr_pdf(self.path, engine=engine)
 
         self.assertEqual(len(engine.calls), 1)
-        self.assertEqual(result["fields"]["shipper"], "Native Company")
-        self.assertEqual(result["fields"]["port_of_discharge"], "Rotterdam")
-        self.assertEqual([hit["page"] for hit in result["occurrences"]], [1, 2])
+        self.assertEqual(len(result["text_by_page"]), 2)
+        self.assertIn("Native Company", result["text_by_page"][0])
+        self.assertEqual(result["text_by_page"][1], "Port of Discharge: Rotterdam")
 
     def test_low_confidence_text_is_ignored_and_page_is_reported_empty(self):
         self._create_pdf()
@@ -97,7 +94,7 @@ class OCRExtractionTests(unittest.TestCase):
 
         result = extract_ocr_pdf(self.path, engine=engine, min_confidence=0.5)
 
-        self.assertIsNone(result["fields"]["shipper"])
+        self.assertEqual(result["raw_text"], "")
         self.assertEqual(result["pages_without_text"], [1])
 
     def test_ocr_options_are_validated(self):

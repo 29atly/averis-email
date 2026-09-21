@@ -45,8 +45,8 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(result.status, 'EXTRACTED')
         self.assertEqual(engine.calls, 1)
         self.assertEqual([p.method for p in result.pages], ['native', 'ocr'])
-        self.assertEqual([h['page'] for h in result.extraction['occurrences']], [1, 2])
-        self.assertEqual(result.extraction['fields']['shipper'], 'Native Company')
+        self.assertIn('Native Company', result.extraction['text_by_page'][0])
+        self.assertEqual(result.extraction['text_by_page'][1], 'Shipper: Scanned Company')
 
     def test_low_confidence_requires_review(self):
         self.pdf()

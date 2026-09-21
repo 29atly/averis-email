@@ -14,29 +14,22 @@ class StructuredExtractionTests(unittest.TestCase):
         self.addCleanup(folder.cleanup)
         self.root = Path(folder.name)
 
-    def test_text_boundaries_multiline_and_duplicates(self):
+    def test_text_is_returned_verbatim(self):
+        content = ('Heading\nShipper (Principal or Seller): Example Ltd\n'
+                   '  123 Main St\n\nSingapore\nConsignee:\nNotify Party: Receiver\n')
         path = self.root / 'input.TXT'
-        path.write_text('Heading\nShipper (Principal or Seller): Example Ltd\n'
-                        '  123 Main St\n\nSingapore\nConsignee:\nNotify Party: Receiver\n'
-                        'Commodity: goods with Shipper in the description\n'
-                        'Shipper: Second Ltd\nGross Weight: 0 KG\n', encoding='utf-8-sig')
+        path.write_text(content, encoding='utf-8-sig')
         result = extract_file(path)
         self.assertEqual(result.status, 'EXTRACTED')
-        fields = result.extraction['fields']
-        self.assertEqual(fields['shipper'], 'Example Ltd\n123 Main St\n\nSingapore')
-        self.assertIsNone(fields['consignee'])
-        self.assertEqual(fields['notify_party'], 'Receiver')
-        self.assertEqual(fields['goods_description'], 'goods with Shipper in the description')
-        self.assertEqual(fields['gross_weight_kg'], '0 KG')
-        self.assertEqual(len([h for h in result.extraction['occurrences'] if h['field']=='shipper']), 2)
-        self.assertNotIn('keyword', result.extraction['occurrences'][0])
+        self.assertEqual(result.extraction['raw_text'], content)
+        self.assertNotIn('fields', result.extraction)
 
     def test_utf16(self):
         path = self.root / 'input.txt'
         path.write_text('Shipper： 公司', encoding='utf-16')
-        self.assertEqual(extract_file(path).extraction['fields']['shipper'], '公司')
+        self.assertEqual(extract_file(path).extraction['raw_text'], 'Shipper： 公司')
 
-    def test_word_tables_paragraphs_and_translations_in_order(self):
+    def test_word_paragraphs_and_tables_in_document_order(self):
         doc = Document()
         doc.add_paragraph('B/L NO.(提单号): ABC123')
         table = doc.add_table(rows=2, cols=2)
@@ -50,36 +43,33 @@ class StructuredExtractionTests(unittest.TestCase):
             doc.save(path)
             result = extract_file(path)
             self.assertEqual(result.status, 'EXTRACTED', result.message)
-            fields = result.extraction['fields']
-            self.assertEqual(fields['bl_number'], 'ABC123')
-            self.assertEqual(fields['shipper'], 'Company\nAddress')
-            self.assertEqual(fields['notify_party'], 'Receiver')
-            self.assertEqual(fields['gross_weight_kg'], '123 KG')
+            self.assertEqual(result.extraction['raw_text'], '\n'.join([
+                'B/L NO.(提单号): ABC123',
+                'Shipper (Principal or Seller) (发货人)\tCompany\nAddress',
+                'Notify Party/Intermediate Consignee (通知人)\tReceiver',
+                'Gross Wt (kgs) (毛重 KGS): 123 KG',
+            ]))
 
-    def test_spreadsheet_adjacent_cells_exact_labels_and_sheets(self):
+    def test_spreadsheet_rows_are_tab_separated_per_sheet(self):
         book = Workbook()
         sheet = book.active
-        sheet.append(['Heading', 'Ignored'])
-        sheet.append(['Shipper:', 'Company\nAddress', 'Unrelated'])
-        sheet.append(['Consignee', None, 'Do not skip blank value'])
-        sheet.append(['Notify Party', 'Shipper', 'Do not parse value as label'])
+        sheet.append(['Shipper:', 'Company', 'Unrelated'])
+        sheet.append([None, None, None])
         sheet.append(['Gross Weight', 0])
-        sheet.append(['Shipper Ltd', 'Not a label'])
         other = book.create_sheet('Second')
         other.append(['Consignee', 'Receiver'])
-        other.append(['Shipper', 'Second company'])
         path = self.root / 'input.XLSX'
         book.save(path)
         book.close()
         result = extract_file(path)
         self.assertEqual(result.status, 'EXTRACTED', result.message)
-        fields = result.extraction['fields']
-        self.assertEqual(fields['shipper'], 'Company\nAddress')
-        self.assertEqual(fields['consignee'], 'Receiver')
-        self.assertEqual(fields['notify_party'], 'Shipper')
-        self.assertEqual(fields['gross_weight_kg'], '0')
-        self.assertEqual(len(result.extraction['occurrences']), 6)
-        self.assertEqual(result.extraction['occurrences'][-1]['sheet'], 'Second')
+        self.assertEqual(result.extraction['raw_text'].splitlines(), [
+            'Sheet: Sheet',
+            'Shipper:\tCompany\tUnrelated',
+            'Gross Weight\t0',
+            'Sheet: Second',
+            'Consignee\tReceiver',
+        ])
 
     def test_corrupt_office_files(self):
         for extension in ('xlsx', 'docx', 'docs'):

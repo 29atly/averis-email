@@ -84,11 +84,11 @@ class DocumentPipelineTests(unittest.TestCase):
             path.write_bytes(office_bytes('xlsx'))
             result = extract_file(path)
             self.assertEqual(result.status, 'EXTRACTED', result.message)
-            self.assertEqual(result.extraction['fields']['shipper'], 'Example Ltd')
-            self.assertEqual(result.extraction['occurrences'][0]['cell'], 'A1')
+            self.assertEqual(result.file_type, 'xlsx')
+            self.assertIn('Shipper\tExample Ltd', result.extraction['raw_text'])
             path = path.with_suffix('.txt')
             path.write_bytes(TEXT.encode('utf-32'))
-            self.assertEqual(extract_file(path).extraction['fields']['shipper'], 'Example Ltd')
+            self.assertEqual(extract_file(path).extraction['raw_text'], TEXT)
 
     def test_comparison_pipeline_uses_router_and_real_field_extraction(self):
         files = {'SI.xlsx': office_bytes('xlsx'), 'BL.docs': office_bytes('docx')}
@@ -108,7 +108,7 @@ class DocumentPipelineTests(unittest.TestCase):
         self.assertFalse(read_document(Loader({}), 'missing.pdf').readable)
 
     def test_partial_ocr_cannot_proceed_to_comparison(self):
-        with patch('averis_email.extraction_pipeline.ocr._page_words_from_ocr', return_value=[]), \
+        with patch('averis_email.extraction_pipeline.ocr._page_text_from_ocr', return_value=''), \
              patch('averis_email.extraction_pipeline.ocr.create_ocr_engine', return_value=FakeOCR()):
             doc = read_document(Loader({'scan.pdf': pdf_bytes(True)}), 'scan.pdf')
         self.assertFalse(doc.readable)

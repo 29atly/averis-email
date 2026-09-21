@@ -31,14 +31,16 @@ class FileExtractionTests(unittest.TestCase):
                         page.insert_text((20, 800), '1')
             document.save(self.path)
 
-    def test_epdf_connects_to_existing_extractor(self):
+    def test_epdf_returns_raw_text_only(self):
         self.create_pdf(['text'])
         result = extract_file(self.path)
         self.assertEqual(result.status, 'EXTRACTED')
         self.assertEqual(result.pdf_type, 'epdf')
         self.assertEqual(result.route, 'pdf_extractor')
-        self.assertEqual(result.extraction, extract_pdf(self.path))
-        self.assertEqual(result.extraction['fields']['shipper'], 'Example Company')
+        self.assertIn('SHIPPER:', result.extraction['raw_text'])
+        self.assertIn('Example Company', result.extraction['raw_text'])
+        self.assertNotIn('fields', result.extraction)
+        self.assertNotIn('occurrences', result.extraction)
 
     def test_scan_and_mixed_pdf_require_ocr(self):
         for kinds, expected in [(['scan'], 'scanned'), (['scan_with_number'], 'scanned'),

@@ -64,7 +64,9 @@ def extract_xlsx(path: Path) -> dict:
             rows_text.append(f"Sheet: {sheet.title}")
             for row in sheet.iter_rows():
                 row_values = [str(cell.value) if cell.value is not None else "" for cell in row]
-                if any(row_values):
+                while row_values and not row_values[-1]:
+                    row_values.pop()
+                if row_values:
                     rows_text.append("\t".join(row_values))
     finally:
         workbook.close()

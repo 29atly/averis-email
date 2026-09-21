@@ -108,8 +108,9 @@ PDF type, selected route, status, page diagnostics, and extraction output.
   The default OCR adapter uses English; supply a configured engine through a
   custom handler for other languages.
 - XLSX, DOCX/`.docs`, and TXT route to the built-in structured extractors:
-  adjacent spreadsheet cells, Word paragraphs/tables, and labeled text lines.
-  All adapters return field occurrences and `raw_text`.
+  decoded text, Word paragraphs/tables in document order, and tab-separated
+  spreadsheet rows. All adapters return `raw_text` only; the PDF adapter also
+  returns `text_by_page` and `pages_without_text`.
 - Blank PDFs and pages without usable OCR output return `NEEDS_REVIEW`.
   Missing, unsupported, corrupt, or password-protected files return `ERROR`,
   with the more specific validation outcome in `result.plan`.
@@ -127,33 +128,12 @@ choices. Detection thresholds remain heuristics requiring validation against
 your document corpus.
 
 See [routing contracts and custom extractors](docs/document-routing.md).
-`EXTRACTED` means the extractor ran, not that every required field was found;
-inspect `extraction.missing_focus_fields`. The email comparison pipeline uses
+`EXTRACTED` means readable text was produced, not that any shipping field was
+found; field extraction happens later in `stages.extraction`. The email
+comparison pipeline uses
 `stages.ingestion.read_document(loader, attachment_path)` to load attachment
 bytes through this same router, then passes `raw_text` to its existing semantic
 field extractor. Review/error outcomes stop comparison as unreadable documents.
-
-The existing PDF-only command remains available:
-
-```bash
-python -m averis_email.stages.extraction "path/to/document.pdf"
-# Or process only *.pdf files in a directory:
-averis-extract-pdf "Averis Hackathon Instruction/sdoc-hackathon-docker/data_v2/attachments" > outputs/extracted.json
-```
-
-Python API: `from averis_email.stages.extraction import extract_pdf` and
-`result = extract_pdf("document.pdf")`.
-
-Edit `src/averis_email/config/keywords.py` to add aliases. The seven focus fields
-are shipper, consignee, notify party, loading/discharge ports, container count,
-and gross weight in kilograms. Additional configured fields are also returned.
-Output includes raw `fields`, ordered `occurrences` with keyword/value word
-coordinates, `missing_focus_fields`, and `pages_without_text`.
-
-Values are verbatim strings, including units and container descriptions; the
-extractor does not convert weights, infer counts, or verify that an unqualified
-gross-weight label uses kilograms. Inspect occurrences when fields repeat;
-`fields` selects the first nonempty occurrence.
 
 ```bash
 PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'

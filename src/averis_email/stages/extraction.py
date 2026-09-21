@@ -755,6 +755,12 @@ def _apply_gemini_result(
         ):
             continue
 
+        if not _evidence_supports_value(
+            evidence,
+            gemini_field.value,
+        ):
+            continue
+
         value = _clean_rule_value(
             field,
             str(

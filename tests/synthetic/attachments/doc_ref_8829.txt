@@ -1,0 +1,10 @@
+SHIPPING REFERENCE DOCUMENT
+Reference ID: REF-8829-SHP
+
+Shipper: Apex Global Logistics Ltd, 10 Marine Parade, Singapore
+Consignee: Pacific Imports Co., 45 Ocean Drive, Rotterdam
+Notify Party: Logistics Care B.V., Port Area 300, Rotterdam
+Departure Location: Shanghai Port
+Arrival Harbor: Rotterdam Port
+Equipment Count: 3 x 40FT Containers
+Total Cargo Mass: 22000 KG

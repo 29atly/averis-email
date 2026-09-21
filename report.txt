@@ -1,18 +1,18 @@
-Total emails: 520  |  Comparisons: 220 (OK: 0, MISMATCH: 0, NEEDS_REVIEW: 220)
-------------------------------------------------------------------------------
-email_001: NEEDS_REVIEW (unreadable)
+Total emails: 520  |  Comparisons: 220 (OK: 60, MISMATCH: 44, NEEDS_REVIEW: 116)
+--------------------------------------------------------------------------------
+email_001: OK - No mismatch detected
 email_002: INVOICE_QUERY
 email_003: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_004: NEEDS_REVIEW (unreadable)
-email_005: NEEDS_REVIEW (unreadable)
+email_004: MISMATCH - consignee (SI: 'EAST BRIGHT FZ-LLC' / BL: 'UAB NOVAKOPA'); notify_party (SI: 'EAST BRIGHT FZ-LLC' / BL: 'UAB NOVAKOPA')
+email_005: OK - No mismatch detected
 email_006: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_007: SI_REQUEST
 email_008: SI_REQUEST
-email_009: NEEDS_REVIEW (unreadable)
+email_009: OK - No mismatch detected
 email_010: INVOICE_QUERY
 email_011: GENERAL
 email_012: GENERAL
-email_013: NEEDS_REVIEW (unreadable)
+email_013: MISMATCH - port_of_discharge (SI: 'MOMBASA, KENYA (KEMBA)' / BL: 'TUTICORIN, INDIA (KEMBA)')
 email_014: SI_REQUEST
 email_015: SPAM
 email_016: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
@@ -24,53 +24,53 @@ email_021: GENERAL
 email_022: SI_REQUEST
 email_023: SI_REQUEST
 email_024: INVOICE_QUERY
-email_025: NEEDS_REVIEW (unreadable)
+email_025: MISMATCH - port_of_discharge (SI: 'FREMANTLE, AUSTRALIA (AUFRE)' / BL: 'BUSAN, SOUTH KOREA (AUFRE)'); container_count (SI: "6 x 20'GP" / BL: "5 x 20'GP")
 email_026: SPAM
 email_027: SI_REQUEST
 email_028: SI_REQUEST
 email_029: SI_REQUEST
 email_030: SI_REQUEST
-email_031: NEEDS_REVIEW (unreadable)
-email_032: NEEDS_REVIEW (unreadable)
+email_031: MISMATCH - container_count (SI: "1 x 20'GP" / BL: "3 x 20'GP"); gross_weight_kg (SI: '21,114 KG' / BL: '23,114 KG')
+email_032: OK - No mismatch detected
 email_033: SI_REQUEST
-email_034: NEEDS_REVIEW (unreadable)
+email_034: OK - No mismatch detected
 email_035: SI_REQUEST
 email_036: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_037: GENERAL
 email_038: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_039: SI_REQUEST
-email_040: NEEDS_REVIEW (unreadable)
+email_040: OK - No mismatch detected
 email_041: INVOICE_QUERY
 email_042: SI_REQUEST
-email_043: NEEDS_REVIEW (unreadable)
-email_044: NEEDS_REVIEW (unreadable)
+email_043: MISMATCH - container_count (SI: "3 x 20'GP" / BL: "5 x 20'GP")
+email_044: OK - No mismatch detected
 email_045: INVOICE_QUERY
-email_046: NEEDS_REVIEW (unreadable)
+email_046: MISMATCH - notify_party (SI: 'TOPKOPY MIDDLE EAST FZE' / BL: 'MOORIM SP CO., LTD')
 email_047: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_048: INVOICE_QUERY
 email_049: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_050: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_051: NEEDS_REVIEW (unreadable)
-email_052: NEEDS_REVIEW (unreadable)
+email_051: OK - No mismatch detected
+email_052: OK - No mismatch detected
 email_053: GENERAL
 email_054: SI_REQUEST
-email_055: NEEDS_REVIEW (unreadable)
-email_056: NEEDS_REVIEW (unreadable)
+email_055: OK - No mismatch detected
+email_056: OK - No mismatch detected
 email_057: SI_REQUEST
-email_058: NEEDS_REVIEW (unreadable)
-email_059: NEEDS_REVIEW (unreadable)
+email_058: OK - No mismatch detected
+email_059: OK - No mismatch detected
 email_060: INVOICE_QUERY
 email_061: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_062: INVOICE_QUERY
 email_063: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_064: NEEDS_REVIEW (unreadable)
-email_065: NEEDS_REVIEW (unreadable)
+email_064: OK - No mismatch detected
+email_065: MISMATCH - notify_party (SI: 'INTERNATIONAL FOREST PRODUCTS LLC' / BL: 'HABRAS INTERNATIONAL LIMITED'); port_of_discharge (SI: 'HOCHIMINH CITY, VIETNAM (VNSGN)' / BL: 'BUSAN, SOUTH KOREA (VNSGN)')
 email_066: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_067: SI_REQUEST
-email_068: NEEDS_REVIEW (unreadable)
+email_068: OK - No mismatch detected
 email_069: INVOICE_QUERY
 email_070: GENERAL
-email_071: NEEDS_REVIEW (unreadable)
+email_071: MISMATCH - port_of_discharge (SI: 'YANGON, MYANMAR (MMRGN)' / BL: 'CEBU, PHILIPPINES (MMRGN)'); container_count (SI: "6 x 40'HC" / BL: "8 x 40'HC")
 email_072: SPAM
 email_073: SI_REQUEST
 email_074: INVOICE_QUERY
@@ -81,7 +81,7 @@ email_078: INVOICE_QUERY
 email_079: SI_REQUEST
 email_080: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_081: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_082: NEEDS_REVIEW (unreadable)
+email_082: OK - No mismatch detected
 email_083: GENERAL
 email_084: SI_REQUEST
 email_085: INVOICE_QUERY
@@ -89,14 +89,14 @@ email_086: GENERAL
 email_087: INVOICE_QUERY
 email_088: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_089: GENERAL
-email_090: NEEDS_REVIEW (unreadable)
-email_091: NEEDS_REVIEW (unreadable)
+email_090: OK - No mismatch detected
+email_091: MISMATCH - container_count (SI: "3 x 40'HC" / BL: "2 x 40'HC")
 email_092: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_093: SI_REQUEST
 email_094: SI_REQUEST
 email_095: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_096: NEEDS_REVIEW (unreadable)
-email_097: NEEDS_REVIEW (unreadable)
+email_096: OK - No mismatch detected
+email_097: MISMATCH - container_count (SI: "10 x 40'HC" / BL: "11 x 40'HC"); gross_weight_kg (SI: '216950' / BL: '215,950')
 email_098: GENERAL
 email_099: INVOICE_QUERY
 email_100: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
@@ -106,33 +106,33 @@ email_103: SI_REQUEST
 email_104: INVOICE_QUERY
 email_105: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_106: SI_REQUEST
-email_107: NEEDS_REVIEW (unreadable)
+email_107: MISMATCH - consignee (SI: 'KTP CO., LTD' / BL: 'VITAL SOLUTIONS PTE. LTD.'); container_count (SI: "2 x 40'HC" / BL: "3 x 40'HC")
 email_108: INVOICE_QUERY
 email_109: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_110: SI_REQUEST
-email_111: NEEDS_REVIEW (unreadable)
+email_111: MISMATCH - container_count (SI: "4 x 20'GP" / BL: "3 x 20'GP")
 email_112: INVOICE_QUERY
-email_113: NEEDS_REVIEW (unreadable)
+email_113: OK - No mismatch detected
 email_114: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_115: INVOICE_QUERY
 email_116: SPAM
 email_117: GENERAL
-email_118: NEEDS_REVIEW (unreadable)
-email_119: NEEDS_REVIEW (unreadable)
+email_118: OK - No mismatch detected
+email_119: MISMATCH - port_of_loading (SI: 'PORT KLANG (WESTPORT), MALAYSIA (MYPKG)' / BL: 'SINGAPORE, SINGAPORE (MYPKG)')
 email_120: SI_REQUEST
-email_121: NEEDS_REVIEW (unreadable)
+email_121: MISMATCH - gross_weight_kg (SI: '20,842 KG' / BL: '21,342 KG')
 email_122: SI_REQUEST
 email_123: SPAM
 email_124: SI_REQUEST
 email_125: SI_REQUEST
 email_126: GENERAL
 email_127: SI_REQUEST
-email_128: NEEDS_REVIEW (unreadable)
-email_129: NEEDS_REVIEW (unreadable)
+email_128: MISMATCH - port_of_loading (SI: 'NHAVA SHEVA, INDIA (INNSA)' / BL: 'BUATAN, INDONESIA (INNSA)'); gross_weight_kg (SI: '323,250 KG' / BL: '322,250 KG')
+email_129: MISMATCH - port_of_loading (SI: 'NHAVA SHEVA, INDIA (INNSA)' / BL: 'BUATAN, INDONESIA (INNSA)'); port_of_discharge (SI: 'ASHDOD, ISRAEL (ILASH)' / BL: 'TUTICORIN, INDIA (ILASH)')
 email_130: SI_REQUEST
 email_131: SI_REQUEST
-email_132: NEEDS_REVIEW (unreadable)
-email_133: NEEDS_REVIEW (unreadable)
+email_132: OK - No mismatch detected
+email_133: MISMATCH - gross_weight_kg (SI: '142,848 KG' / BL: '144,848 KG')
 email_134: SPAM
 email_135: SI_REQUEST
 email_136: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
@@ -142,10 +142,10 @@ email_139: INVOICE_QUERY
 email_140: SPAM
 email_141: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_142: INVOICE_QUERY
-email_143: NEEDS_REVIEW (unreadable)
-email_144: NEEDS_REVIEW (unreadable)
-email_145: NEEDS_REVIEW (unreadable)
-email_146: NEEDS_REVIEW (unreadable)
+email_143: OK - No mismatch detected
+email_144: MISMATCH - consignee (SI: 'NAGAPPA EXPORTS' / BL: 'PACIFIC OFFICE (M) SDN BHD'); container_count (SI: "12 x 40'HC" / BL: "11 x 40'HC")
+email_145: MISMATCH - shipper (SI: 'APRIL FINE PAPER TRADING' / BL: 'APRIL FINE PAPER TRADING (MIDDLE EAST) FZE')
+email_146: OK - No mismatch detected
 email_147: GENERAL
 email_148: SI_REQUEST
 email_149: SI_REQUEST
@@ -159,29 +159,29 @@ email_156: SPAM
 email_157: SI_REQUEST
 email_158: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_159: GENERAL
-email_160: NEEDS_REVIEW (unreadable)
+email_160: NEEDS_REVIEW (missing_value) (missing: gross_weight_kg)
 email_161: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_162: SI_REQUEST
 email_163: SI_REQUEST
 email_164: SI_REQUEST
 email_165: INVOICE_QUERY
 email_166: SI_REQUEST
-email_167: NEEDS_REVIEW (unreadable)
+email_167: OK - No mismatch detected
 email_168: SI_REQUEST
 email_169: INVOICE_QUERY
 email_170: INVOICE_QUERY
-email_171: NEEDS_REVIEW (unreadable)
+email_171: OK - No mismatch detected
 email_172: SI_REQUEST
 email_173: GENERAL
-email_174: NEEDS_REVIEW (unreadable)
-email_175: NEEDS_REVIEW (unreadable)
+email_174: MISMATCH - notify_party (SI: 'TOAN LUC PAPER JOINT STOCK COMPANY' / BL: 'MOORIM SP CO., LTD'); port_of_discharge (SI: 'CONAKRY, GUINEA (GNCKY)' / BL: 'HOCHIMINH CITY, VIETNAM (GNCKY)')
+email_175: OK - No mismatch detected
 email_176: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_177: SI_REQUEST
-email_178: NEEDS_REVIEW (unreadable)
+email_178: MISMATCH - container_count (SI: "6 x 20'GP" / BL: "7 x 20'GP")
 email_179: INVOICE_QUERY
 email_180: SPAM
 email_181: SI_REQUEST
-email_182: NEEDS_REVIEW (unreadable)
+email_182: MISMATCH - port_of_discharge (SI: 'APAPA, NIGERIA (NGAPP)' / BL: 'BALTIMORE, US (NGAPP)'); container_count (SI: "5 x 40'HC" / BL: "6 x 40'HC")
 email_183: SI_REQUEST
 email_184: SPAM
 email_185: GENERAL
@@ -196,8 +196,8 @@ email_193: SI_REQUEST
 email_194: GENERAL
 email_195: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_196: SI_REQUEST
-email_197: NEEDS_REVIEW (unreadable)
-email_198: NEEDS_REVIEW (unreadable)
+email_197: OK - No mismatch detected
+email_198: OK - No mismatch detected
 email_199: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_200: GENERAL
 email_201: SI_REQUEST
@@ -207,7 +207,7 @@ email_204: SPAM
 email_205: SI_REQUEST
 email_206: SPAM
 email_207: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_208: NEEDS_REVIEW (unreadable)
+email_208: NEEDS_REVIEW (missing_value) (missing: gross_weight_kg)
 email_209: SI_REQUEST
 email_210: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_211: INVOICE_QUERY
@@ -224,9 +224,9 @@ email_221: SI_REQUEST
 email_222: SPAM
 email_223: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_224: INVOICE_QUERY
-email_225: NEEDS_REVIEW (unreadable)
+email_225: MISMATCH - consignee (SI: 'ROXCEL TRADING GMBH' / BL: 'AL GURG STATIONERY LLC')
 email_226: SPAM
-email_227: NEEDS_REVIEW (unreadable)
+email_227: OK - No mismatch detected
 email_228: SI_REQUEST
 email_229: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_230: GENERAL
@@ -234,28 +234,28 @@ email_231: SPAM
 email_232: GENERAL
 email_233: SI_REQUEST
 email_234: GENERAL
-email_235: NEEDS_REVIEW (unreadable)
+email_235: OK - No mismatch detected
 email_236: INVOICE_QUERY
 email_237: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_238: GENERAL
-email_239: NEEDS_REVIEW (unreadable)
+email_239: OK - No mismatch detected
 email_240: SI_REQUEST
 email_241: GENERAL
 email_242: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_243: NEEDS_REVIEW (unreadable)
+email_243: MISMATCH - port_of_loading (SI: 'PORT KLANG (WESTPORT), MALAYSIA' / BL: 'RUGAO/NANTONG/SHANGHAI, CHINA'); port_of_discharge (SI: 'HOUSTON, US' / BL: 'MOMBASA, KENYA')
 email_244: SI_REQUEST
 email_245: SI_REQUEST
 email_246: SI_REQUEST
 email_247: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_248: SPAM
-email_249: NEEDS_REVIEW (unreadable)
+email_249: OK - No mismatch detected
 email_250: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_251: SI_REQUEST
 email_252: GENERAL
 email_253: SPAM
 email_254: SPAM
 email_255: GENERAL
-email_256: NEEDS_REVIEW (unreadable)
+email_256: MISMATCH - shipper (SI: 'APRIL FINE PAPER TRADING' / BL: 'APRIL FAR EAST (M) SDN BHD'); port_of_discharge (SI: 'VALPARAISO, CHILE (CLVAP)' / BL: 'FREMANTLE, AUSTRALIA (CLVAP)')
 email_257: SI_REQUEST
 email_258: GENERAL
 email_259: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
@@ -269,12 +269,12 @@ email_266: GENERAL
 email_267: SPAM
 email_268: INVOICE_QUERY
 email_269: INVOICE_QUERY
-email_270: NEEDS_REVIEW (unreadable)
+email_270: MISMATCH - port_of_discharge (SI: 'MERSIN, TURKEY (TRMER)' / BL: 'LONG BEACH, US (TRMER)')
 email_271: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_272: INVOICE_QUERY
-email_273: NEEDS_REVIEW (unreadable)
+email_273: OK - No mismatch detected
 email_274: INVOICE_QUERY
-email_275: NEEDS_REVIEW (unreadable)
+email_275: OK - No mismatch detected
 email_276: SI_REQUEST
 email_277: SI_REQUEST
 email_278: SI_REQUEST
@@ -290,29 +290,29 @@ email_287: INVOICE_QUERY
 email_288: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_289: SI_REQUEST
 email_290: SI_REQUEST
-email_291: NEEDS_REVIEW (unreadable)
+email_291: MISMATCH - consignee (SI: 'INTERNATIONAL FOREST PRODUCTS LLC' / BL: 'TOPKOPY MIDDLE EAST FZE'); container_count (SI: "1 x 20'GP" / BL: "3 x 20'GP")
 email_292: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_293: SI_REQUEST
 email_294: GENERAL
 email_295: SI_REQUEST
-email_296: NEEDS_REVIEW (unreadable)
+email_296: OK - No mismatch detected
 email_297: GENERAL
 email_298: INVOICE_QUERY
 email_299: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_300: NEEDS_REVIEW (unreadable)
+email_300: MISMATCH - shipper (SI: 'APRIL FAR EAST (M) SDN BHD' / BL: 'APRIL FINE PAPER TRADING (MIDDLE EAST) FZE'); notify_party (SI: 'UAB NOVAKOPA' / BL: 'NAGAPPA EXPORTS')
 email_301: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_302: NEEDS_REVIEW (unreadable)
+email_302: MISMATCH - container_count (SI: "2 x 20'GP" / BL: "4 x 20'GP")
 email_303: INVOICE_QUERY
 email_304: INVOICE_QUERY
 email_305: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_306: SI_REQUEST
-email_307: NEEDS_REVIEW (unreadable)
+email_307: OK - No mismatch detected
 email_308: SI_REQUEST
 email_309: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_310: SI_REQUEST
 email_311: SI_REQUEST
-email_312: NEEDS_REVIEW (unreadable)
-email_313: NEEDS_REVIEW (unreadable)
+email_312: MISMATCH - shipper (SI: 'APRIL FINE PAPER TRADING (MIDDLE EAST) FZE' / BL: 'APRIL FAR EAST (M) SDN BHD'); notify_party (SI: '3S PAPER PRODUCTS SDN BHD' / BL: 'KPP-ANTALIS (SINGAPORE) PTE. LTD.')
+email_313: NEEDS_REVIEW (missing_value) (missing: gross_weight_kg)
 email_314: INVOICE_QUERY
 email_315: SPAM
 email_316: INVOICE_QUERY
@@ -323,7 +323,7 @@ email_320: SI_REQUEST
 email_321: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_322: SI_REQUEST
 email_323: GENERAL
-email_324: NEEDS_REVIEW (unreadable)
+email_324: MISMATCH - shipper (SI: 'ASIA PACIFIC PAPERBOARD TRADING PTE LTD' / BL: 'APRIL FAR EAST (M) SDN BHD'); container_count (SI: "3 x 40'HC" / BL: "4 x 40'HC")
 email_325: GENERAL
 email_326: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_327: SI_REQUEST
@@ -333,40 +333,40 @@ email_330: GENERAL
 email_331: INVOICE_QUERY
 email_332: GENERAL
 email_333: GENERAL
-email_334: NEEDS_REVIEW (unreadable)
-email_335: NEEDS_REVIEW (unreadable)
+email_334: MISMATCH - shipper (SI: 'ASIA PACIFIC PAPERBOARD TRADING PTE LTD' / BL: 'APRIL FINE PAPER TRADING'); consignee (SI: 'EAST BRIGHT FZ-LLC' / BL: 'INTERNATIONAL FOREST PRODUCTS LLC')
+email_335: OK - No mismatch detected
 email_336: SI_REQUEST
 email_337: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_338: SI_REQUEST
 email_339: SI_REQUEST
 email_340: GENERAL
 email_341: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_342: NEEDS_REVIEW (unreadable)
+email_342: MISMATCH - notify_party (SI: 'HABRAS INTERNATIONAL LIMITED' / BL: 'SAFQA LIMITED'); container_count (SI: "1 x 40'HC" / BL: "2 x 40'HC")
 email_343: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_344: SI_REQUEST
 email_345: SPAM
 email_346: GENERAL
 email_347: GENERAL
-email_348: NEEDS_REVIEW (unreadable)
-email_349: NEEDS_REVIEW (unreadable)
+email_348: OK - No mismatch detected
+email_349: OK - No mismatch detected
 email_350: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_351: NEEDS_REVIEW (unreadable)
+email_351: NEEDS_REVIEW (missing_value) (missing: gross_weight_kg)
 email_352: SI_REQUEST
 email_353: SI_REQUEST
-email_354: NEEDS_REVIEW (unreadable)
+email_354: MISMATCH - notify_party (SI: 'HABRAS INTERNATIONAL LIMITED' / BL: 'NAGAPPA EXPORTS'); gross_weight_kg (SI: '20603' / BL: '22,603')
 email_355: INVOICE_QUERY
 email_356: GENERAL
 email_357: SI_REQUEST
 email_358: SI_REQUEST
 email_359: SI_REQUEST
 email_360: SI_REQUEST
-email_361: NEEDS_REVIEW (unreadable)
+email_361: MISMATCH - port_of_discharge (SI: 'BRISBANE, AUSTRALIA (AUBNE)' / BL: 'MOMBASA, KENYA (AUBNE)'); gross_weight_kg (SI: '239,590 KG' / BL: '238,590 KG')
 email_362: SI_REQUEST
 email_363: SPAM
-email_364: NEEDS_REVIEW (unreadable)
+email_364: OK - No mismatch detected
 email_365: SPAM
 email_366: GENERAL
-email_367: NEEDS_REVIEW (unreadable)
+email_367: OK - No mismatch detected
 email_368: SI_REQUEST
 email_369: INVOICE_QUERY
 email_370: SI_REQUEST
@@ -376,13 +376,13 @@ email_373: INVOICE_QUERY
 email_374: INVOICE_QUERY
 email_375: INVOICE_QUERY
 email_376: SI_REQUEST
-email_377: NEEDS_REVIEW (unreadable)
-email_378: NEEDS_REVIEW (unreadable)
-email_379: NEEDS_REVIEW (unreadable)
+email_377: OK - No mismatch detected
+email_378: OK - No mismatch detected
+email_379: MISMATCH - shipper (SI: 'APRIL FAR EAST (M) SDN BHD' / BL: 'APRIL FINE PAPER TRADING')
 email_380: SI_REQUEST
 email_381: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_382: SPAM
-email_383: NEEDS_REVIEW (unreadable)
+email_383: OK - No mismatch detected
 email_384: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_385: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_386: INVOICE_QUERY
@@ -390,32 +390,32 @@ email_387: SPAM
 email_388: SI_REQUEST
 email_389: INVOICE_QUERY
 email_390: SPAM
-email_391: NEEDS_REVIEW (unreadable)
+email_391: OK - No mismatch detected
 email_392: SPAM
 email_393: SI_REQUEST
 email_394: GENERAL
 email_395: SPAM
 email_396: GENERAL
 email_397: SI_REQUEST
-email_398: NEEDS_REVIEW (unreadable)
+email_398: OK - No mismatch detected
 email_399: GENERAL
 email_400: SI_REQUEST
 email_401: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_402: INVOICE_QUERY
 email_403: INVOICE_QUERY
 email_404: SPAM
-email_405: NEEDS_REVIEW (unreadable)
+email_405: OK - No mismatch detected
 email_406: INVOICE_QUERY
-email_407: NEEDS_REVIEW (unreadable)
-email_408: NEEDS_REVIEW (unreadable)
-email_409: NEEDS_REVIEW (unreadable)
-email_410: NEEDS_REVIEW (unreadable)
-email_411: NEEDS_REVIEW (unreadable)
+email_407: OK - No mismatch detected
+email_408: OK - No mismatch detected
+email_409: OK - No mismatch detected
+email_410: MISMATCH - port_of_loading (SI: 'SINGAPORE (SGSIN)' / BL: 'PORT KLANG (WESTPORT), MALAYSIA (SGSIN)')
+email_411: NEEDS_REVIEW (missing_value) (missing: gross_weight_kg)
 email_412: INVOICE_QUERY
 email_413: SI_REQUEST
 email_414: GENERAL
 email_415: GENERAL
-email_416: NEEDS_REVIEW (unreadable)
+email_416: MISMATCH - gross_weight_kg (SI: '105,625 KG' / BL: '106,625 KG')
 email_417: SPAM
 email_418: GENERAL
 email_419: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
@@ -425,16 +425,16 @@ email_422: INVOICE_QUERY
 email_423: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_424: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_425: INVOICE_QUERY
-email_426: NEEDS_REVIEW (unreadable)
+email_426: MISMATCH - port_of_discharge (SI: 'NEW YORK, US (USNYC)' / BL: 'KLAIPEDA, LITHUANIA (USNYC)'); container_count (SI: "10 x 40'HC" / BL: "11 x 40'HC")
 email_427: SI_REQUEST
-email_428: NEEDS_REVIEW (unreadable)
+email_428: OK - No mismatch detected
 email_429: SI_REQUEST
 email_430: SI_REQUEST
 email_431: GENERAL
 email_432: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_433: SI_REQUEST
-email_434: NEEDS_REVIEW (unreadable)
-email_435: NEEDS_REVIEW (unreadable)
+email_434: MISMATCH - port_of_discharge (SI: 'BUSAN, SOUTH KOREA' / BL: 'CEBU, PHILIPPINES')
+email_435: MISMATCH - gross_weight_kg (SI: '214270' / BL: '214,770')
 email_436: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_437: SI_REQUEST
 email_438: SI_REQUEST
@@ -452,7 +452,7 @@ email_449: SPAM
 email_450: SPAM
 email_451: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_452: INVOICE_QUERY
-email_453: NEEDS_REVIEW (unreadable)
+email_453: OK - No mismatch detected
 email_454: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_455: SPAM
 email_456: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
@@ -461,28 +461,28 @@ email_458: INVOICE_QUERY
 email_459: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_460: GENERAL
 email_461: INVOICE_QUERY
-email_462: NEEDS_REVIEW (unreadable)
+email_462: OK - No mismatch detected
 email_463: GENERAL
 email_464: GENERAL
 email_465: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_466: SI_REQUEST
 email_467: SI_REQUEST
-email_468: NEEDS_REVIEW (unreadable)
+email_468: MISMATCH - port_of_loading (SI: 'SINGAPORE (SGSIN)' / BL: 'RUGAO/NANTONG/SHANGHAI, CHINA (SGSIN)'); container_count (SI: "1 x 40'HC" / BL: "3 x 40'HC")
 email_469: SI_REQUEST
 email_470: SPAM
 email_471: INVOICE_QUERY
 email_472: INVOICE_QUERY
 email_473: INVOICE_QUERY
-email_474: NEEDS_REVIEW (unreadable)
+email_474: OK - No mismatch detected
 email_475: SI_REQUEST
 email_476: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_477: SI_REQUEST
 email_478: SI_REQUEST
-email_479: NEEDS_REVIEW (unreadable)
+email_479: OK - No mismatch detected
 email_480: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_481: NEEDS_REVIEW (unreadable)
+email_481: MISMATCH - consignee (SI: 'AL GURG STATIONERY LLC' / BL: '3S PAPER PRODUCTS SDN BHD')
 email_482: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_483: NEEDS_REVIEW (unreadable)
+email_483: OK - No mismatch detected
 email_484: SI_REQUEST
 email_485: SI_REQUEST
 email_486: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
@@ -490,21 +490,21 @@ email_487: SI_REQUEST
 email_488: GENERAL
 email_489: SPAM
 email_490: INVOICE_QUERY
-email_491: NEEDS_REVIEW (unreadable)
+email_491: OK - No mismatch detected
 email_492: INVOICE_QUERY
 email_493: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_494: NEEDS_REVIEW (unreadable)
+email_494: OK - No mismatch detected
 email_495: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
-email_496: NEEDS_REVIEW (unreadable)
+email_496: OK - No mismatch detected
 email_497: INVOICE_QUERY
-email_498: NEEDS_REVIEW (unreadable)
-email_499: NEEDS_REVIEW (unreadable)
+email_498: OK - No mismatch detected
+email_499: MISMATCH - gross_weight_kg (SI: '40,326 KG' / BL: '41,326 KG')
 email_500: INVOICE_QUERY
-email_501: NEEDS_REVIEW (unreadable)
-email_502: NEEDS_REVIEW (unreadable)
-email_503: NEEDS_REVIEW (unreadable)
-email_504: NEEDS_REVIEW (unreadable)
-email_505: NEEDS_REVIEW (unreadable)
+email_501: NEEDS_REVIEW (missing_value) (missing: consignee, notify_party, port_of_loading, port_of_discharge, container_count, gross_weight_kg)
+email_502: NEEDS_REVIEW (missing_value) (missing: notify_party, port_of_loading, port_of_discharge, container_count, gross_weight_kg)
+email_503: NEEDS_REVIEW (missing_value) (missing: notify_party, port_of_loading, port_of_discharge, container_count, gross_weight_kg)
+email_504: NEEDS_REVIEW (missing_value) (missing: notify_party, port_of_loading, port_of_discharge, container_count, gross_weight_kg)
+email_505: NEEDS_REVIEW (missing_value) (missing: notify_party, port_of_loading, port_of_discharge, container_count, gross_weight_kg)
 email_506: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
 email_507: NEEDS_REVIEW (missing_attachment)  [warnings: No BL attachment identified]
 email_508: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
@@ -515,8 +515,8 @@ email_512: NEEDS_REVIEW (unreadable)
 email_513: NEEDS_REVIEW (unreadable)
 email_514: NEEDS_REVIEW (unreadable)
 email_515: NEEDS_REVIEW (unreadable)
-email_516: NEEDS_REVIEW (unreadable)
-email_517: NEEDS_REVIEW (unreadable)
-email_518: NEEDS_REVIEW (unreadable)
-email_519: NEEDS_REVIEW (unreadable)
-email_520: NEEDS_REVIEW (unreadable)
+email_516: NEEDS_REVIEW (missing_value) (missing: gross_weight_kg)
+email_517: NEEDS_REVIEW (missing_value) (missing: port_of_discharge)
+email_518: NEEDS_REVIEW (missing_value) (missing: port_of_discharge, gross_weight_kg)
+email_519: NEEDS_REVIEW (missing_value) (missing: shipper, container_count)
+email_520: NEEDS_REVIEW (missing_value) (missing: consignee)

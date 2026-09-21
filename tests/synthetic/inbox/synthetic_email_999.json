@@ -1,0 +1,10 @@
+{
+  "email_id": "email_999",
+  "from": "ops.desk@globalfreight.com",
+  "subject": "RE: Urgent quick question regarding next week",
+  "body": "Hi team, regarding the booking for next week, could you cross-reference the two docs attached? Please verify if the discharge point and cargo weight line up before we confirm with the carrier.",
+  "attachments": [
+    "attachments/doc_ref_8829.txt",
+    "attachments/carrier_copy_v1.txt"
+  ]
+}

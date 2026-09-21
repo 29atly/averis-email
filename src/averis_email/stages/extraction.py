@@ -166,47 +166,18 @@ def _empty_fields(source_file: str) -> dict:
 
 
 def _annotation_pattern() -> str:
-    """Allow optional annotations following a field label.
-
-    Examples:
-
-    Shipper/Exporter (发货人)
-    Gross Wt (kgs) (毛重 KGS)
-    """
+    """Allow optional annotations following a field label."""
 
     return r"(?:\s*\([^)]*\))*"
 
 
 def _match_field_label(line: str):
-    """Check whether a line starts with a required field label.
-
-    Supported forms include:
-
-    Shipper: ABC TRADING
-    Shipper - ABC TRADING
-    Shipper | ABC TRADING
-    Shipper<TAB>ABC TRADING
-    Shipper ABC TRADING
-
-    It also supports:
-
-    Shipper
-    ABC TRADING
-    """
+    """Check whether a line starts with a required field label."""
 
     annotation = _annotation_pattern()
 
     for field, label in LABEL_ENTRIES:
         escaped = re.escape(label)
-
-        # ---------------------------------------------------------
-        # Case 1:
-        #
-        # Label: Value
-        # Label - Value
-        # Label | Value
-        # Label<TAB>Value
-        # ---------------------------------------------------------
 
         pattern = (
             rf"^\s*{escaped}"
@@ -226,14 +197,6 @@ def _match_field_label(line: str):
                 match.group(1).strip(),
             )
 
-        # ---------------------------------------------------------
-        # Case 2:
-        #
-        # Label Value
-        #
-        # Example:
-        # Load Port PORT KLANG
-        # ---------------------------------------------------------
 
         pattern = (
             rf"^\s*{escaped}"
@@ -252,13 +215,6 @@ def _match_field_label(line: str):
                 field,
                 match.group(1).strip(),
             )
-
-        # ---------------------------------------------------------
-        # Case 3:
-        #
-        # Label
-        # Value appears on following line.
-        # ---------------------------------------------------------
 
         pattern = (
             rf"^\s*{escaped}"

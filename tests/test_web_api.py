@@ -166,6 +166,48 @@ def test_confirming_comparison_category_resumes_pipeline(api):
     assert runner.call_args.kwargs == {'category_override': 'BL_COMPARISON'}
 
 
+def test_manual_attachment_classification_resolves_ambiguous_names(api):
+    """A comparison request with vague attachment titles can't be auto-labeled
+    SI vs BL; the reviewer must be able to assign them manually instead of
+    looping back through the same failing rule-based resolution."""
+    client, runner, _ = api
+    runner.return_value = PipelineResult(email_id='email_1', category='BL_COMPARISON', status='NEEDS_REVIEW',
+                                         review_reason='missing_attachment')
+    case = client.get('/cases/email_1').json()
+    assert case['reviewReasonCode'] == 'missing_attachment'
+    assert case['siFile'] is None and case['blFile'] is None
+    si = ExtractedDoc(attachment_path='attachments/si.txt', fields={
+        key: FieldValue(value='10' if key in ['container_count', 'gross_weight_kg'] else 'ACME') for key in FIELDS})
+    bl = si.model_copy(deep=True)
+    bl.attachment_path = 'attachments/bl.txt'
+    runner.return_value = PipelineResult(email_id='email_1', category='BL_COMPARISON', status='OK', si=si, bl=bl)
+    response = client.post('/cases/email_1/review', json={
+        'revision': case['revision'], 'si_attachment': 'attachments/si.txt', 'bl_attachment': 'attachments/bl.txt'})
+    assert response.status_code == 200, response.text
+    reviewed = response.json()
+    assert reviewed['status'] == 'complete'
+    assert reviewed['siFile'] == 'attachments/si.txt'
+    assert reviewed['blFile'] == 'attachments/bl.txt'
+    assert runner.call_args.kwargs == {'attachment_override': ('attachments/si.txt', 'attachments/bl.txt')}
+
+
+def test_manual_attachment_classification_rejects_invalid_selection(api):
+    client, runner, _ = api
+    runner.return_value = PipelineResult(email_id='email_1', category='BL_COMPARISON', status='NEEDS_REVIEW',
+                                         review_reason='wrong_doc_type')
+    case = client.get('/cases/email_1').json()
+    same_file = client.post('/cases/email_1/review', json={
+        'revision': case['revision'], 'si_attachment': 'attachments/si.txt', 'bl_attachment': 'attachments/si.txt'})
+    assert same_file.status_code == 422
+    unknown_file = client.post('/cases/email_1/review', json={
+        'revision': case['revision'], 'si_attachment': 'attachments/si.txt', 'bl_attachment': 'attachments/missing.txt'})
+    assert unknown_file.status_code == 422
+    only_one = client.post('/cases/email_1/review', json={
+        'revision': case['revision'], 'si_attachment': 'attachments/si.txt'})
+    assert only_one.status_code == 422
+    assert client.get('/cases/email_1').json()['status'] == 'review'
+
+
 def test_manual_case_is_created_pending_and_processed(api):
     client, runner, _ = api
     response = client.post('/cases', data={'subject': 'New shipment query', 'content': 'Please compare docs'},

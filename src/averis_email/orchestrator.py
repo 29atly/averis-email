@@ -19,7 +19,8 @@ def _with_warnings(detail: dict, warnings: list) -> dict:
     return {**detail, "attachment_warnings": warnings}
 
 
-def run_pipeline(loader, email: dict, *, category_override: str | None = None) -> PipelineResult:
+def run_pipeline(loader, email: dict, *, category_override: str | None = None,
+                  attachment_override: tuple[str, str] | None = None) -> PipelineResult:
     eid = email["email_id"]
     stage = 'classification'
 
@@ -50,32 +51,40 @@ def run_pipeline(loader, email: dict, *, category_override: str | None = None) -
         return result(email_id=eid, category=category, status=None)
 
     stage = 'attachment_resolution'
-    try:
-        resolution = classification.find_si_bl(email)
-    except Exception as e:
-        return result(email_id=eid, category=category, status="NEEDS_REVIEW",
-                               review_reason="unreadable", error=f"find_si_bl failed: {e}")
+    resolution = None
+    if attachment_override:
+        # A human reviewer has already told us which attachment is which --
+        # trust that identification instead of re-running the filename
+        # heuristics that failed to resolve it automatically.
+        si_path, bl_path = attachment_override
+        attachment_warnings = []
+    else:
+        try:
+            resolution = classification.find_si_bl(email)
+        except Exception as e:
+            return result(email_id=eid, category=category, status="NEEDS_REVIEW",
+                                   review_reason="unreadable", error=f"find_si_bl failed: {e}")
 
-    # Captured once, carried through every return below -- this is the fix:
-    # previously these warnings only survived on the review_required path.
-    attachment_warnings = resolution.warnings
+        # Captured once, carried through every return below -- this is the fix:
+        # previously these warnings only survived on the review_required path.
+        attachment_warnings = resolution.warnings
 
-    if resolution.review_required:
-        return result(email_id=eid, category=category, status="NEEDS_REVIEW",
-                               review_reason=resolution.review_reason,
-                               diff_detail=_with_warnings({}, attachment_warnings))
+        if resolution.review_required:
+            return result(email_id=eid, category=category, status="NEEDS_REVIEW",
+                                   review_reason=resolution.review_reason,
+                                   diff_detail=_with_warnings({}, attachment_warnings))
 
-    si_path, bl_path = resolution.si_path, resolution.bl_path
-    if not si_path or not bl_path:
-        return result(email_id=eid, category=category, status="NEEDS_REVIEW",
-                               review_reason="missing_attachment",
-                               diff_detail=_with_warnings({}, attachment_warnings))
+        si_path, bl_path = resolution.si_path, resolution.bl_path
+        if not si_path or not bl_path:
+            return result(email_id=eid, category=category, status="NEEDS_REVIEW",
+                                   review_reason="missing_attachment",
+                                   diff_detail=_with_warnings({}, attachment_warnings))
 
     stage = 'extraction'
     si_doc = bl_doc = None
     try:
-        si_doc = extraction.extract_fields(resolution.si_doc or ingestion.read_document(loader, si_path))
-        bl_doc = extraction.extract_fields(resolution.bl_doc or ingestion.read_document(loader, bl_path))
+        si_doc = extraction.extract_fields((resolution.si_doc if resolution else None) or ingestion.read_document(loader, si_path))
+        bl_doc = extraction.extract_fields((resolution.bl_doc if resolution else None) or ingestion.read_document(loader, bl_path))
     except Exception as e:
         return result(email_id=eid, category=category, status="NEEDS_REVIEW",
                                review_reason="unreadable", error=f"read/extract failed: {e}", si=si_doc, bl=bl_doc,

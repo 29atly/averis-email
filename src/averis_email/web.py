@@ -60,12 +60,16 @@ def find_email(email_id):
     return email
 
 
-def process(email, previous=None, category_override=None):
+def process(email, previous=None, category_override=None, attachment_override=None):
     started = perf_counter()
     loader = CompositeLoader(INBOX, MANUAL)
+    kwargs = {}
+    if category_override:
+        kwargs['category_override'] = category_override
+    if attachment_override:
+        kwargs['attachment_override'] = attachment_override
     try:
-        result = (run_pipeline(loader, email, category_override=category_override)
-                  if category_override else run_pipeline(loader, email))
+        result = run_pipeline(loader, email, **kwargs)
     except Exception:
         result = PipelineResult(email_id=email['email_id'], category='GENERAL', status='NEEDS_REVIEW',
                                 review_reason='unreadable', error='Pipeline failed. Check server configuration and retry.')
@@ -194,7 +198,21 @@ def review_case(email_id: str, request: ReviewRequest):
         result = PipelineResult.model_validate(state['result'])
         if result.status != 'NEEDS_REVIEW':
             raise HTTPException(409, 'Case is not awaiting review')
-        if request.category:
+        if request.si_attachment or request.bl_attachment:
+            if request.category or request.si or request.bl:
+                raise HTTPException(422, 'Attachment classification cannot include a category change or shipping field corrections')
+            if not request.si_attachment or not request.bl_attachment:
+                raise HTTPException(422, 'Choose both the shipping instruction and bill of lading attachment')
+            if request.si_attachment == request.bl_attachment:
+                raise HTTPException(422, 'The shipping instruction and bill of lading must be different attachments')
+            if result.category != 'BL_COMPARISON' or result.review_reason not in ('missing_attachment', 'wrong_doc_type'):
+                raise HTTPException(422, 'This case does not need manual attachment classification')
+            valid_paths = {path for path in (email.get('attachments') or []) if isinstance(path, str)}
+            if request.si_attachment not in valid_paths or request.bl_attachment not in valid_paths:
+                raise HTTPException(422, 'Unknown attachment selected')
+            state = process(email, state, attachment_override=(request.si_attachment, request.bl_attachment))
+            result = PipelineResult.model_validate(state['result'])
+        elif request.category:
             if result.si or result.bl or request.si or request.bl:
                 raise HTTPException(422, 'Category confirmation cannot include shipping field corrections')
             if request.category == 'BL_COMPARISON':
@@ -225,6 +243,7 @@ def review_case(email_id: str, request: ReviewRequest):
         state['revision'] += 1
         state['corrections'] = {'si': request.si, 'bl': request.bl}
         state['activity'].append(event('Human review confirmed',
+            f"SI: {request.si_attachment}, BL: {request.bl_attachment}" if request.si_attachment else
             f"Category: {request.category}" if request.category else
             'Corrected ' + ', '.join(f'{side}.{key}' for side in ('si', 'bl') for key in getattr(request, side))))
         STORE.put(email, state)

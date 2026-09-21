@@ -80,14 +80,26 @@
         const value = reviewItem.values[key][index];
         return `<div><label for="review-${side}-${key}">${side.toUpperCase()} · ${escapeHTML(fieldName(key))}</label><p>${escapeHTML(value.source_text || 'No source text available')}</p><input id="review-${side}-${key}" data-side="${side}" data-review-field="${key}" value="${escapeHTML(value.normalized == null ? '' : value.raw)}" required></div>`;
       }).join('')).join('') : '';
-      const categoryInput = !reviewItem.siFile && !reviewItem.blFile ? `<label>Confirm classification<select id="reviewCategory" required><option value="">Choose category</option>${Object.entries(window.ShippingStore.categoryLabels).filter(([key]) => key !== 'unclassified').map(([key, label]) => `<option value="${key.toUpperCase()}">${escapeHTML(label)}</option>`).join('')}</select></label>` : '';
-      detail.innerHTML = `<div class="case-banner"><div><span class="kicker">${escapeHTML(reviewItem.id)} · Decision needed</span><h2>${escapeHTML(reviewItem.subject)}</h2></div></div><div class="review-detail"><div class="review-alert"><h2>Why this needs you</h2><p>${escapeHTML(reviewItem.reviewReason)}</p></div><form class="review-form" id="reviewForm"><div class="review-fields">${inputs}${categoryInput}</div><div class="button-row">${inputs || categoryInput ? '<button class="primary-button" type="submit">Confirm and continue</button>' : ''}<a class="secondary-button" href="message.html?case=${encodeURIComponent(reviewItem.id)}">View original email and attachments</a><button class="secondary-button" type="button" id="retryButton">Retry processing</button></div></form></div>`;
+      const needsAttachmentClassification = reviewItem.category === 'bl_comparison' && !reviewItem.siFile && !reviewItem.blFile
+        && ['missing_attachment', 'wrong_doc_type'].includes(reviewItem.reviewReasonCode);
+      const attachmentOptions = (reviewItem.attachments || []).map(item => `<option value="${escapeHTML(item.path)}">${escapeHTML(item.name)}</option>`).join('');
+      const attachmentInput = needsAttachmentClassification ? `<label>Shipping instruction attachment<select id="reviewSiAttachment" required><option value="">Choose file</option>${attachmentOptions}</select></label><label>Draft bill of lading attachment<select id="reviewBlAttachment" required><option value="">Choose file</option>${attachmentOptions}</select></label>` : '';
+      const categoryInput = !needsAttachmentClassification && !reviewItem.siFile && !reviewItem.blFile ? `<label>Confirm classification<select id="reviewCategory" required><option value="">Choose category</option>${Object.entries(window.ShippingStore.categoryLabels).filter(([key]) => key !== 'unclassified').map(([key, label]) => `<option value="${key.toUpperCase()}">${escapeHTML(label)}</option>`).join('')}</select></label>` : '';
+      detail.innerHTML = `<div class="case-banner"><div><span class="kicker">${escapeHTML(reviewItem.id)} · Decision needed</span><h2>${escapeHTML(reviewItem.subject)}</h2></div></div><div class="review-detail"><div class="review-alert"><h2>Why this needs you</h2><p>${escapeHTML(reviewItem.reviewReason)}</p></div><form class="review-form" id="reviewForm"><div class="review-fields">${inputs}${attachmentInput}${categoryInput}</div><div class="button-row">${inputs || attachmentInput || categoryInput ? '<button class="primary-button" type="submit">Confirm and continue</button>' : ''}<a class="secondary-button" href="message.html?case=${encodeURIComponent(reviewItem.id)}">View original email and attachments</a><button class="secondary-button" type="button" id="retryButton">Retry processing</button></div></form></div>`;
       document.getElementById('reviewForm').addEventListener('submit', async event => {
         event.preventDefault();
         const payload = { revision: reviewItem.revision, si: {}, bl: {} };
         document.querySelectorAll('[data-review-field]').forEach(input => { payload[input.dataset.side][input.dataset.reviewField] = input.value.trim(); });
         const category = document.getElementById('reviewCategory')?.value;
         if (category) payload.category = category;
+        const siAttachment = document.getElementById('reviewSiAttachment')?.value;
+        const blAttachment = document.getElementById('reviewBlAttachment')?.value;
+        if (siAttachment || blAttachment) {
+          if (!siAttachment || !blAttachment) { notify('Choose both the SI and BL attachment.'); return; }
+          if (siAttachment === blAttachment) { notify('Choose two different files for SI and BL.'); return; }
+          payload.si_attachment = siAttachment;
+          payload.bl_attachment = blAttachment;
+        }
         const button = event.submitter; button.disabled = true;
         try {
           const result = await window.ShippingStore.review(reviewItem.id, payload);

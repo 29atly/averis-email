@@ -69,6 +69,8 @@ class ReviewRequest(BaseModel):
     si: dict[str, str] = Field(default_factory=dict)
     bl: dict[str, str] = Field(default_factory=dict)
     category: Literal['BL_COMPARISON', 'SI_REQUEST', 'INVOICE_QUERY', 'GENERAL', 'SPAM'] | None = None
+    si_attachment: str | None = None
+    bl_attachment: str | None = None
 
     @field_validator('si', 'bl')
     @classmethod

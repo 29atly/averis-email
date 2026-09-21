@@ -6,7 +6,6 @@ from unittest.mock import patch
 import pymupdf
 
 from averis_email.extraction_pipeline import extract_file
-from averis_email.stages.pdf_extraction import extract_pdf
 
 
 class FileExtractionTests(unittest.TestCase):

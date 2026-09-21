@@ -63,6 +63,28 @@ class Case(BaseModel):
     reviewStage: str | None = None
 
 
+class GmailSettings(BaseModel):
+    address: str | None = None
+    configured: bool = False
+    enabled: bool = False
+    last_poll_at: str | None = None
+    last_error: str | None = None
+    ingested_count: int = 0
+
+
+class GmailSettingsRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    address: str
+    password: str | None = None
+    enabled: bool | None = None
+
+
+class GmailTestRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    address: str | None = None
+    password: str | None = None
+
+
 class ReviewRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     revision: int = Field(ge=1)

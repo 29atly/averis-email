@@ -6,8 +6,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from averis_email import web
+from averis_email.gmail_client import GmailAuthError, GmailConnectionError
+from averis_email.gmail_store import GmailStore
 from averis_email.manual_store import ManualStore
 from averis_email.schemas import FIELDS, ExtractedDoc, FieldValue, PipelineResult
+from averis_email.settings_store import GmailSettingsStore
 from averis_email.ui_api import StateStore
 
 
@@ -24,6 +27,8 @@ def api(tmp_path, monkeypatch):
     monkeypatch.setattr(web, 'INBOX', inbox)
     monkeypatch.setattr(web, 'STORE', StateStore(tmp_path / 'state.sqlite3'))
     monkeypatch.setattr(web, 'MANUAL', ManualStore(tmp_path / 'manual'))
+    monkeypatch.setattr(web, 'GMAIL_SETTINGS', GmailSettingsStore(tmp_path / 'gmail-config.json'))
+    monkeypatch.setattr(web, 'GMAIL_STORE', GmailStore(tmp_path / 'gmail-inbox'))
     si = ExtractedDoc(attachment_path='attachments/si.txt', fields={
         key: FieldValue(value='10' if key in ['container_count', 'gross_weight_kg'] else 'ACME',
                         source_file='attachments/si.txt', source_page=1, raw_text=f'{key}: original') for key in FIELDS})
@@ -288,3 +293,118 @@ def test_manual_attachment_path_is_scoped_to_its_case(api, monkeypatch):
          'attachments': [f"manual/{owner['id']}/SI.txt"], 'received_at': ''}])
     response = client.get(f'/emails/{imposter_id}/attachments/0')
     assert response.status_code == 400
+
+
+def test_gmail_settings_default_state(api):
+    client, _, _ = api
+    assert client.get('/settings/gmail').json() == {
+        'address': None, 'configured': False, 'enabled': False,
+        'last_poll_at': None, 'last_error': None, 'ingested_count': 0}
+
+
+def test_gmail_settings_rejects_invalid_address(api):
+    client, _, _ = api
+    response = client.put('/settings/gmail', json={'address': 'not-an-email', 'password': 'app-password-123'})
+    assert response.status_code == 422
+
+
+def test_gmail_settings_requires_password_on_first_save(api):
+    client, _, _ = api
+    response = client.put('/settings/gmail', json={'address': 'ops@example.com'})
+    assert response.status_code == 422
+
+
+def test_gmail_settings_save_never_returns_password(api):
+    client, _, _ = api
+    response = client.put('/settings/gmail', json={
+        'address': 'ops@example.com', 'password': 'app-password-123', 'enabled': True})
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {'address': 'ops@example.com', 'configured': True, 'enabled': True,
+                    'last_poll_at': None, 'last_error': None, 'ingested_count': 0}
+    assert 'password' not in body
+    # Re-saving without a password keeps the previously stored one.
+    again = client.put('/settings/gmail', json={'address': 'ops@example.com', 'enabled': False})
+    assert again.status_code == 200
+    assert again.json()['configured'] is True
+    assert again.json()['enabled'] is False
+
+
+def test_gmail_settings_delete_clears_configuration(api):
+    client, _, _ = api
+    client.put('/settings/gmail', json={'address': 'ops@example.com', 'password': 'app-password-123'})
+    response = client.delete('/settings/gmail')
+    assert response.status_code == 200
+    assert response.json()['configured'] is False
+
+
+def test_gmail_settings_rejects_unknown_fields(api):
+    client, _, _ = api
+    response = client.put('/settings/gmail', json={
+        'address': 'ops@example.com', 'password': 'app-password-123', 'unexpected': 'x'})
+    assert response.status_code == 422
+
+
+def test_gmail_test_connection_requires_credentials(api):
+    client, _, _ = api
+    assert client.post('/settings/gmail/test', json={}).status_code == 422
+
+
+def test_gmail_test_connection_success(api, monkeypatch):
+    client, _, _ = api
+    login = Mock()
+    monkeypatch.setattr(web, 'test_login', login)
+    response = client.post('/settings/gmail/test', json={'address': 'ops@example.com', 'password': 'pw'})
+    assert response.status_code == 200
+    assert response.json() == {'ok': True}
+    login.assert_called_once_with('ops@example.com', 'pw')
+
+
+def test_gmail_test_connection_reuses_stored_credentials(api, monkeypatch):
+    client, _, _ = api
+    client.put('/settings/gmail', json={'address': 'ops@example.com', 'password': 'stored-pw'})
+    login = Mock()
+    monkeypatch.setattr(web, 'test_login', login)
+    assert client.post('/settings/gmail/test', json={}).status_code == 200
+    login.assert_called_once_with('ops@example.com', 'stored-pw')
+
+
+def test_gmail_test_connection_surfaces_auth_failure(api, monkeypatch):
+    client, _, _ = api
+    monkeypatch.setattr(web, 'test_login', Mock(side_effect=GmailAuthError('bad credentials')))
+    response = client.post('/settings/gmail/test', json={'address': 'ops@example.com', 'password': 'wrong'})
+    assert response.status_code == 401
+
+
+def test_gmail_test_connection_surfaces_network_failure(api, monkeypatch):
+    client, _, _ = api
+    monkeypatch.setattr(web, 'test_login', Mock(side_effect=GmailConnectionError('timed out')))
+    response = client.post('/settings/gmail/test', json={'address': 'ops@example.com', 'password': 'pw'})
+    assert response.status_code == 503
+
+
+def test_gmail_ingested_mail_is_listed_processed_and_downloadable(api):
+    """End-to-end through the real GmailStore (not the pipeline mock's
+    email, which stays inbox-only): a record ingested the way the poller
+    will ingest it must appear in /cases ahead of the static inbox record,
+    process through the real pipeline mock, and serve its attachment."""
+    client, runner, _ = api
+    record = web.GMAIL_STORE.ingest({
+        'email_id': 'gmail_1001_5', 'from': 'shipper@example.com', 'to': 'ops@example.com',
+        'subject': 'New booking', 'body': 'See attached SI.', 'received_at': '2026-09-22T00:00:00+00:00',
+        'source': 'gmail', 'message_id': '<x@mail.gmail.com>', 'gmail_uid': 5, 'gmail_uidvalidity': 1001,
+    }, [('SI_new.pdf', b'%PDF-fake-si')])
+    assert record['attachments'] == ['gmail/gmail_1001_5/SI_new.pdf']
+
+    listed = client.get('/cases').json()
+    ids = [case['id'] for case in listed]
+    assert 'gmail_1001_5' in ids
+    assert ids.index('gmail_1001_5') < ids.index('email_1')  # gmail ahead of the static inbox
+
+    detail = client.get('/cases/gmail_1001_5').json()
+    assert detail['subject'] == 'New booking'
+    assert runner.call_count == 1
+
+    download = client.get('/emails/gmail_1001_5/attachments/0')
+    assert download.status_code == 200
+    assert download.content == b'%PDF-fake-si'

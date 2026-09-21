@@ -18,17 +18,23 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from averis_email.data_loader import Inbox
+from averis_email.gmail_client import GmailAuthError, GmailConnectionError, test_login
+from averis_email.gmail_store import GmailStore
 from averis_email.manual_store import CompositeLoader, ManualStore, ManualUploadError
 from averis_email.orchestrator import run_pipeline
 from averis_email.schemas import FieldValue, PipelineResult
+from averis_email.settings_store import GmailSettingsError, GmailSettingsStore
 from averis_email.stages import comparison, validation
-from averis_email.ui_api import Case, ReviewRequest, StateStore, event, to_case
+from averis_email.ui_api import (Case, GmailSettings, GmailSettingsRequest, GmailTestRequest,
+                                 ReviewRequest, StateStore, event, to_case)
 
 load_dotenv()
 app = FastAPI(title='Averis Email Pipeline API')
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'])
 INBOX = Inbox(os.getenv('AVERIS_INBOX_SOURCE', 'data'))
 MANUAL = ManualStore(os.getenv('AVERIS_MANUAL_UPLOADS', '.cache/manual-uploads'))
+GMAIL_STORE = GmailStore(os.getenv('AVERIS_GMAIL_STORE', '.cache/gmail-inbox'))
+GMAIL_SETTINGS = GmailSettingsStore(os.getenv('AVERIS_GMAIL_CONFIG', '.cache/gmail-config.json'))
 STORE = StateStore(os.getenv('AVERIS_UI_STATE', '.cache/ui-state.sqlite3'), namespace=INBOX.source)
 LOCK = RLock()
 
@@ -42,14 +48,15 @@ class EmailSummary(BaseModel):
 
 def emails():
     manual = MANUAL.emails()
+    gmail = GMAIL_STORE.emails()
     try:
         records = INBOX.emails()
-        if not records and not manual and not INBOX.is_http and not (Path(INBOX.source) / 'inbox').is_dir():
+        if not records and not manual and not gmail and not INBOX.is_http and not (Path(INBOX.source) / 'inbox').is_dir():
             raise HTTPException(503, 'Inbox not configured: set AVERIS_INBOX_SOURCE to the folder containing inbox/ and attachments/.')
-        return manual + records
+        return manual + gmail + records
     except (OSError, ValueError, URLError) as exc:
-        if manual:
-            return manual
+        if manual or gmail:
+            return manual + gmail
         raise HTTPException(503, 'Inbox source is unavailable') from exc
 
 
@@ -62,7 +69,7 @@ def find_email(email_id):
 
 def process(email, previous=None, category_override=None, attachment_override=None):
     started = perf_counter()
-    loader = CompositeLoader(INBOX, MANUAL)
+    loader = CompositeLoader(INBOX, MANUAL, GMAIL_STORE)
     kwargs = {}
     if category_override:
         kwargs['category_override'] = category_override
@@ -86,6 +93,45 @@ def process(email, previous=None, category_override=None, attachment_override=No
 @app.get('/health')
 def health():
     return {'status': 'ok'}
+
+
+@app.get('/settings/gmail', response_model=GmailSettings)
+def get_gmail_settings():
+    return GmailSettings(**GMAIL_SETTINGS.public())
+
+
+@app.put('/settings/gmail', response_model=GmailSettings)
+def save_gmail_settings(request: GmailSettingsRequest):
+    try:
+        GMAIL_SETTINGS.save(request.address, password=request.password, enabled=request.enabled)
+    except GmailSettingsError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return GmailSettings(**GMAIL_SETTINGS.public())
+
+
+@app.delete('/settings/gmail', response_model=GmailSettings)
+def delete_gmail_settings():
+    GMAIL_SETTINGS.clear()
+    return GmailSettings(**GMAIL_SETTINGS.public())
+
+
+@app.post('/settings/gmail/test')
+def test_gmail_settings(request: GmailTestRequest = GmailTestRequest()):
+    """Checks credentials without saving them, so a typo can be caught before
+    Save. Falls back to whatever is already stored for any field left blank,
+    so re-testing a saved mailbox needs no re-entered password."""
+    stored = GMAIL_SETTINGS.get()
+    address = (request.address or stored.get('address') or '').strip()
+    password = request.password or stored.get('password')
+    if not address or not password:
+        raise HTTPException(422, 'Enter an address and app password to test')
+    try:
+        test_login(address, password)
+    except GmailAuthError as exc:
+        raise HTTPException(401, f'Login rejected: {exc}') from exc
+    except GmailConnectionError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    return {'ok': True}
 
 
 @app.get('/emails', response_model=list[EmailSummary])
@@ -125,11 +171,14 @@ def get_original_attachment(email_id: str, attachment_index: int):
     if not isinstance(path, str):
         raise HTTPException(400, 'invalid attachment path')
     is_manual = path.startswith('manual/')
-    if not is_manual:
+    is_gmail = path.startswith('gmail/')
+    if not is_manual and not is_gmail:
         _validate_inbox_path(path)
     try:
         if is_manual:
             content = MANUAL.read_bytes(path, email_id=email_id)
+        elif is_gmail:
+            content = GMAIL_STORE.read_bytes(path, email_id=email_id)
         else:
             content = INBOX.read_bytes(path)
     except (OSError, URLError) as exc:

@@ -37,6 +37,48 @@ class ManualUploadError(ValueError):
         self.status_code = status_code
 
 
+def list_records(root, id_re):
+    """Newest-first records from '<root>/<id>/email.json' directories whose
+    name matches id_re. Unreadable or malformed records are skipped, not
+    raised. Shared by ManualStore and GmailStore -- same on-disk shape,
+    different id prefix."""
+    root = Path(root)
+    if not root.is_dir():
+        return []
+    records = []
+    for directory in root.iterdir():
+        if not id_re.match(directory.name) or not directory.is_dir():
+            continue
+        try:
+            record = json.loads((directory / 'email.json').read_text())
+        except (OSError, ValueError):
+            continue
+        if record.get('email_id') != directory.name:
+            continue
+        records.append(record)
+    records.sort(key=lambda r: r.get('received_at') or '', reverse=True)
+    return records
+
+
+def resolve_prefixed_path(root, prefix, email_id, path):
+    """Validate and resolve a '<prefix>/<email_id>/<name>' attachment path to
+    a file under '<root>/<email_id>/files/'. Raises ValueError. Shared so a
+    path-traversal fix only has to happen in one place."""
+    if unquote(path) != path or '\\' in path or '?' in path or '#' in path:
+        raise ValueError('invalid attachment path')
+    parts = PurePosixPath(path).parts
+    if len(parts) != 3 or parts[0] != prefix or '..' in parts:
+        raise ValueError('invalid attachment path')
+    if parts[1] != email_id:
+        raise ValueError('attachment does not belong to this case')
+    root = Path(root)
+    files_dir = (root / email_id / 'files').resolve()
+    target = (root / parts[1] / 'files' / parts[2]).resolve()
+    if not target.is_relative_to(files_dir) or not target.is_file() or target.is_symlink():
+        raise ValueError('attachment not found')
+    return target
+
+
 def validate_filename(filename):
     name = PurePosixPath((filename or '').replace('\\', '/')).name
     if not name or name in ('.', '..'):
@@ -72,21 +114,7 @@ class ManualStore:
     # -- listing -----------------------------------------------------
     def emails(self):
         """Newest first. Unreadable or malformed records are skipped, not raised."""
-        if not self.root.is_dir():
-            return []
-        records = []
-        for directory in self.root.iterdir():
-            if not ID_RE.match(directory.name) or not directory.is_dir():
-                continue
-            try:
-                record = json.loads((directory / 'email.json').read_text())
-            except (OSError, ValueError):
-                continue
-            if record.get('email_id') != directory.name:
-                continue
-            records.append(record)
-        records.sort(key=lambda r: r.get('received_at') or '', reverse=True)
-        return records
+        return list_records(self.root, ID_RE)
 
     # -- creation ------------------------------------------------------
     def create(self, subject, body, files):
@@ -148,18 +176,7 @@ class ManualStore:
     # -- attachment reads ------------------------------------------------
     def resolve(self, email_id, path):
         """Validate and resolve a 'manual/<email_id>/<name>' path. Raises ValueError."""
-        if unquote(path) != path or '\\' in path or '?' in path or '#' in path:
-            raise ValueError('invalid attachment path')
-        parts = PurePosixPath(path).parts
-        if len(parts) != 3 or parts[0] != PREFIX or '..' in parts:
-            raise ValueError('invalid attachment path')
-        if parts[1] != email_id:
-            raise ValueError('attachment does not belong to this case')
-        files_dir = (self.root / email_id / 'files').resolve()
-        target = (self.root / parts[1] / 'files' / parts[2]).resolve()
-        if not target.is_relative_to(files_dir) or not target.is_file() or target.is_symlink():
-            raise ValueError('attachment not found')
-        return target
+        return resolve_prefixed_path(self.root, PREFIX, email_id, path)
 
     def read_bytes(self, path, email_id=None):
         parts = PurePosixPath(path).parts
@@ -168,15 +185,19 @@ class ManualStore:
 
 
 class CompositeLoader:
-    """A loader for run_pipeline() that routes manual/... paths to the local
-    manual store and everything else to the configured inbox source."""
-    def __init__(self, inbox, manual):
+    """A loader for run_pipeline() that routes manual/... and gmail/... paths
+    to their local stores and everything else to the configured inbox
+    source. `gmail` is optional so existing callers/tests are unaffected."""
+    def __init__(self, inbox, manual, gmail=None):
         self.inbox = inbox
         self.manual = manual
+        self.gmail = gmail
         self.source = inbox.source
         self.is_http = inbox.is_http
 
     def read_bytes(self, path):
+        if self.gmail is not None and path.startswith('gmail/'):
+            return self.gmail.read_bytes(path)
         if path.startswith(f'{PREFIX}/'):
             return self.manual.read_bytes(path)
         return self.inbox.read_bytes(path)

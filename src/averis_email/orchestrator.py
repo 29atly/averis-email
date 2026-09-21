@@ -32,6 +32,11 @@ def run_pipeline(loader, email: dict, *, category_override: str | None = None,
     try:
         if category_override is not None and category_override not in CATEGORIES:
             raise ValueError('Unsupported category override')
+        # A reviewer assigning SI/BL roles has already confirmed this is a
+        # comparison request -- don't re-run classification (which can hit
+        # a non-deterministic LLM/Laya backend) just to re-derive that.
+        if attachment_override and category_override is None:
+            category_override = 'BL_COMPARISON'
         decision = ClassificationDecision(category_override) if category_override else classify_email(email)
     except Exception as e:
         return result(email_id=eid, category="GENERAL", status="NEEDS_REVIEW",

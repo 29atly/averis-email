@@ -60,6 +60,30 @@ def test_every_review_exit_preserves_sources(failure, stage):
     assert f'Stage: {stage}' in report
 
 
+def test_attachment_override_skips_reclassification():
+    """A reviewer assigning SI/BL roles by hand has already confirmed this is
+    a comparison request. Re-deriving the category (which can call out to a
+    non-deterministic LLM/Laya backend) must not happen -- doing so risks the
+    case abstaining again and bouncing the reviewer back to square one."""
+    email = deepcopy(EMAIL)
+    si = ExtractedDoc(attachment_path='attachments/si.txt')
+    bl = ExtractedDoc(attachment_path='attachments/bl.txt')
+    with patch('averis_email.orchestrator.classify_email') as classify, \
+         patch('averis_email.orchestrator.classification.find_si_bl') as resolve, \
+         patch('averis_email.orchestrator.ingestion.read_document',
+               side_effect=lambda loader, path: si if path == 'attachments/si.txt' else bl), \
+         patch('averis_email.orchestrator.extraction.extract_fields', side_effect=lambda doc: doc), \
+         patch('averis_email.orchestrator.validation.missing_fields', return_value=[]), \
+         patch('averis_email.orchestrator.comparison.compare_fields', return_value=([], {})):
+        result = run_pipeline(None, email, attachment_override=('attachments/si.txt', 'attachments/bl.txt'))
+    classify.assert_not_called()
+    resolve.assert_not_called()
+    assert result.category == 'BL_COMPARISON'
+    assert result.status == 'OK'
+    assert result.si.attachment_path == 'attachments/si.txt'
+    assert result.bl.attachment_path == 'attachments/bl.txt'
+
+
 def test_download_returns_exact_original_bytes(tmp_path):
     folder = tmp_path / 'attachments'
     folder.mkdir()

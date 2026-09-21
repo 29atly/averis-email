@@ -29,6 +29,10 @@ from averis_email.data_loader import Inbox
 from averis_email.orchestrator import run_pipeline
 from averis_email.schemas import PipelineResult
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 app = FastAPI(title="Averis Email Pipeline API")
 
 app.add_middleware(

@@ -137,6 +137,12 @@ def _intent(text):
     return None
 
 
+def match_email_rules(email: dict) -> str | None:
+    """Return a matched intent, or None so another classifier can try."""
+    return (_intent(_current_body(email.get('body') or ''))
+            or _intent(_normalize(email.get('subject') or '')))
+
+
 def classify_email(email: dict) -> str:
     """Classify the intent of an incoming email.
 
@@ -144,8 +150,7 @@ def classify_email(email: dict) -> str:
     back to the subject. Attachments are deliberately ignored because
     their filenames should not determine the email's intent.
     """
-    return (_intent(_current_body(email.get('body') or ''))
-            or _intent(_normalize(email.get('subject') or '')) or 'GENERAL')
+    return match_email_rules(email) or 'GENERAL'
 
 
 def _filename_text(path):

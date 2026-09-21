@@ -1,8 +1,12 @@
 # LLM email classifier
 
-This standalone classifier accepts email text and uses the same system prompt
+This classifier accepts email text and uses the same system prompt
 and decision schema with NVIDIA NIM, Gemini, or Hugging Face Inference Providers.
-It is separate from `stages/classification.py`. Set `EMAIL_CLASSIFIER_MODE=llm`
+The default pipeline mode, `EMAIL_CLASSIFIER_MODE=cascade`, calls it only after
+rules find no match and Laya cannot classify confidently or fails. Configure
+`EMAIL_LLM_PROVIDER` and its credentials/model for this fallback. If the LLM
+also fails or abstains, the email goes to human review.
+Set `EMAIL_CLASSIFIER_MODE=llm`
 to use it in the comparison pipeline. Successful `BL_COMPARISON` decisions
 continue to the existing attachment resolver; review outcomes stop processing.
 

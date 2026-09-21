@@ -1,87 +1,202 @@
+"""Local API and frontend. Run uvicorn averis_email.web:app --port 8000.
+
+Use one worker: pipeline executions and review updates are serialized locally.
 """
-web.py -- small local API so the frontend/demo can call the pipeline live
-instead of only reading submission.json.
+import mimetypes
+import os
+from pathlib import Path, PurePosixPath
+from threading import RLock
+from time import perf_counter
+from urllib.parse import quote, unquote
+from urllib.error import URLError
 
-Run:
-    pip install fastapi uvicorn
-    uvicorn averis_email.web:app --reload --port 8000
-
-Then from the frontend:
-    GET  http://localhost:8000/emails             -> lightweight list for an inbox view
-    GET  http://localhost:8000/emails/{email_id}  -> full pipeline result for one email
-
-Responses are now typed with real Pydantic models (see schemas.py), which
-gets you two things for free: FastAPI validates every response actually
-matches the shape before sending it, and interactive API docs appear at
-http://localhost:8000/docs -- useful for your UI teammate to explore the
-API without asking you what fields exist.
-
-CORS is left wide open (allow_origins=["*"]) so the frontend can call this
-from any port during the hackathon -- fine for a demo, not for production.
-"""
-from typing import List, Optional
-
-from fastapi import FastAPI, HTTPException
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from averis_email.data_loader import Inbox
 from averis_email.orchestrator import run_pipeline
-from averis_email.schemas import PipelineResult
-
-from dotenv import load_dotenv
+from averis_email.schemas import FieldValue, PipelineResult
+from averis_email.stages import comparison, validation
+from averis_email.ui_api import Case, ReviewRequest, StateStore, event, to_case
 
 load_dotenv()
-
-app = FastAPI(title="Averis Email Pipeline API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Change "data" to wherever you extracted the bundle, or point this at the
-# docker server instead: Inbox("http://localhost:8080")
-INBOX = Inbox("data")
+app = FastAPI(title='Averis Email Pipeline API')
+app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'])
+INBOX = Inbox(os.getenv('AVERIS_INBOX_SOURCE', 'data'))
+STORE = StateStore(os.getenv('AVERIS_UI_STATE', '.cache/ui-state.sqlite3'), namespace=INBOX.source)
+LOCK = RLock()
 
 
 class EmailSummary(BaseModel):
-    """Lightweight shape for the inbox list -- no pipeline run needed.
-    Named `sender` rather than `from` because `from` is a reserved Python
-    keyword and can't be used as a field name."""
     email_id: str
-    sender: Optional[str] = None
-    subject: Optional[str] = None
+    sender: str | None = None
+    subject: str | None = None
     has_attachments: bool
 
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+def emails():
+    try:
+        records = INBOX.emails()
+        if not records and not INBOX.is_http and not (Path(INBOX.source) / 'inbox').is_dir():
+            raise HTTPException(503, 'Inbox not configured: set AVERIS_INBOX_SOURCE to the folder containing inbox/ and attachments/.')
+        return records
+    except (OSError, ValueError, URLError) as exc:
+        raise HTTPException(503, 'Inbox source is unavailable') from exc
 
 
-@app.get("/emails", response_model=List[EmailSummary])
-def list_emails():
-    """Lightweight list for a sidebar/inbox view -- does not run the pipeline."""
-    return [
-        EmailSummary(
-            email_id=e["email_id"],
-            sender=e.get("from"),
-            subject=e.get("subject"),
-            has_attachments=bool(e.get("attachments")),
-        )
-        for e in INBOX.emails()
-    ]
-
-
-@app.get("/emails/{email_id}", response_model=PipelineResult)
-def get_email_result(email_id: str):
-    """Runs the full pipeline for one email on demand and returns the
-    result, including SI/BL field-level detail for the UI to render."""
-    email = next((e for e in INBOX.emails() if e["email_id"] == email_id), None)
+def find_email(email_id):
+    email = next((e for e in emails() if e['email_id'] == email_id), None)
     if email is None:
-        raise HTTPException(status_code=404, detail="email not found")
+        raise HTTPException(404, 'email not found')
+    return email
 
-    return run_pipeline(INBOX, email)
+
+def process(email, previous=None, category_override=None):
+    started = perf_counter()
+    try:
+        result = (run_pipeline(INBOX, email, category_override=category_override)
+                  if category_override else run_pipeline(INBOX, email))
+    except Exception:
+        result = PipelineResult(email_id=email['email_id'], category='GENERAL', status='NEEDS_REVIEW',
+                                review_reason='unreadable', error='Pipeline failed. Check server configuration and retry.')
+    state = dict(result=result.model_dump(mode='json'), duration=perf_counter() - started,
+                 revision=STORE.next_revision(email),
+                 activity=(previous or {}).get('activity', []) + [event(
+                     'Processing retried' if previous else 'Email processed',
+                     f"{result.category}: {result.status or 'Classification complete'}",
+                     result.status == 'NEEDS_REVIEW')])
+    STORE.put(email, state)
+    return state
+
+
+@app.get('/health')
+def health():
+    return {'status': 'ok'}
+
+
+@app.get('/emails', response_model=list[EmailSummary])
+def list_emails():
+    return [EmailSummary(email_id=e['email_id'], sender=e.get('from'), subject=e.get('subject'),
+                         has_attachments=bool(e.get('attachments'))) for e in emails()]
+
+
+@app.get('/emails/{email_id}', response_model=PipelineResult)
+def get_email_result(email_id: str):
+    with LOCK:
+        email = find_email(email_id)
+        state = STORE.get(email) or process(email)
+        return PipelineResult.model_validate(state['result'])
+
+
+@app.get('/emails/{email_id}/attachments/{attachment_index}')
+def get_original_attachment(email_id: str, attachment_index: int):
+    # Resolve only attachments belonging to this email; never accept a client path.
+    email = find_email(email_id)
+    attachments = email.get('attachments') or []
+    if attachment_index < 0 or attachment_index >= len(attachments):
+        raise HTTPException(404, 'attachment not found')
+    path = attachments[attachment_index]
+    if not isinstance(path, str):
+        raise HTTPException(400, 'invalid attachment path')
+    parsed = PurePosixPath(path)
+    if (parsed.is_absolute() or '..' in parsed.parts or '\\' in path or
+            unquote(path) != path or '?' in path or '#' in path or
+            not parsed.parts or parsed.parts[0] != 'attachments'):
+        raise HTTPException(400, 'invalid attachment path')
+    if not INBOX.is_http:
+        root = (Path(INBOX.source) / 'attachments').resolve()
+        if not (Path(INBOX.source) / path).resolve().is_relative_to(root):
+            raise HTTPException(400, 'invalid attachment path')
+    try:
+        content = INBOX.read_bytes(path)
+    except (OSError, URLError) as exc:
+        raise HTTPException(404, 'attachment unavailable') from exc
+    return Response(content, media_type=mimetypes.guess_type(path)[0] or 'application/octet-stream',
+                    headers={'Content-Disposition': f"attachment; filename*=UTF-8''{quote(parsed.name, safe='')}",
+                             'X-Content-Type-Options': 'nosniff'})
+
+
+@app.get('/cases', response_model=list[Case])
+def list_cases(q: str = '', category: str | None = None, status: str | None = None,
+               limit: int = Query(100, ge=1, le=1000), offset: int = Query(0, ge=0)):
+    """List without inference. Unprocessed emails have pending/unclassified state."""
+    with LOCK:
+        records = emails()
+        states = STORE.get_many(records)
+        cases = [to_case(email, states.get(email['email_id'])) for email in records]
+    return [case for case in cases if
+            (not q or q.casefold() in f'{case.id} {case.subject} {case.sender} {case.body}'.casefold()) and
+            (category is None or case.category == category.lower()) and
+            (status is None or case.status == status)][offset:offset + limit]
+
+
+@app.get('/cases/{email_id}', response_model=Case)
+def get_case(email_id: str):
+    with LOCK:
+        email = find_email(email_id)
+        return to_case(email, STORE.get(email) or process(email))
+
+
+@app.post('/cases/{email_id}/retry', response_model=Case)
+def retry_case(email_id: str):
+    """Run synchronously against the current source; discard previous corrections."""
+    with LOCK:
+        email = find_email(email_id)
+        return to_case(email, process(email, STORE.get(email)))
+
+
+@app.post('/cases/{email_id}/review', response_model=Case)
+def review_case(email_id: str, request: ReviewRequest):
+    with LOCK:
+        email = find_email(email_id)
+        state = STORE.get(email)
+        if not state or request.revision != state['revision']:
+            raise HTTPException(409, 'Case changed. Reload before confirming values.')
+        result = PipelineResult.model_validate(state['result'])
+        if result.status != 'NEEDS_REVIEW':
+            raise HTTPException(409, 'Case is not awaiting review')
+        if request.category:
+            if result.si or result.bl or request.si or request.bl:
+                raise HTTPException(422, 'Category confirmation cannot include shipping field corrections')
+            if request.category == 'BL_COMPARISON':
+                state = process(email, state, category_override=request.category)
+                result = PipelineResult.model_validate(state['result'])
+            else:
+                result = PipelineResult(email_id=email_id, category=request.category)
+        else:
+            if not to_case(email, state).canConfirmValues or not (request.si or request.bl):
+                raise HTTPException(422, 'This case needs source correction and retry, or category confirmation')
+            for side in ('si', 'bl'):
+                doc = getattr(result, side)
+                for key, value in getattr(request, side).items():
+                    old = doc.fields.get(key)
+                    old = old.model_dump() if isinstance(old, FieldValue) else old
+                    field = dict(old) if isinstance(old, dict) else {}
+                    field['value'] = value.strip()
+                    doc.fields[key] = FieldValue.model_validate(field)
+            if validation.missing_fields(result.si, result.bl):
+                raise HTTPException(422, 'Confirm all missing SI and BL values before continuing')
+            defects, detail = comparison.compare_fields(result.si, result.bl)
+            result.status = 'MISMATCH' if defects else 'OK'
+            result.has_defect, result.defect_fields = bool(defects), defects
+            result.review_reason, result.error, result.review_context = None, None, None
+            result.diff_detail = {**result.diff_detail, **detail}
+            result.diff_detail.pop('missing_fields', None)
+        state['result'] = result.model_dump(mode='json')
+        state['revision'] += 1
+        state['corrections'] = {'si': request.si, 'bl': request.bl}
+        state['activity'].append(event('Human review confirmed',
+            f"Category: {request.category}" if request.category else
+            'Corrected ' + ', '.join(f'{side}.{key}' for side in ('si', 'bl') for key in getattr(request, side))))
+        STORE.put(email, state)
+        return to_case(email, state)
+
+
+# Keep API routes above the mount. Installed packages may omit repository assets.
+FRONTEND = Path(__file__).resolve().parents[2] / 'frontend'
+if FRONTEND.is_dir():
+    app.mount('/ui', StaticFiles(directory=FRONTEND, html=True), name='frontend')

@@ -41,11 +41,20 @@ pip install -e .
 Set the pipeline's classifier in `.env`:
 
 ```dotenv
-EMAIL_CLASSIFIER_MODE=rule_based
+EMAIL_CLASSIFIER_MODE=cascade
 ```
 
-Available modes are `rule_based` (default), `laya` (local option scoring), and
-`llm` (hosted model). For `llm`, `EMAIL_LLM_PROVIDER` selects `nvidia`, `gemini`,
+The default `cascade` mode tries rules first, then local Laya when no rule
+matches, then the hosted LLM if Laya abstains, fails, or returns an invalid
+category. An explicit rule match for `GENERAL` stops the chain. Empty or
+malformed email text goes directly to review. Backends load only when needed.
+Install Laya with `pip install -e '.[laya]'`; if unavailable, the chain proceeds
+to the LLM. Set the hosted provider's key and model in the git-ignored `.env`
+(for NVIDIA: `NVIDIA_API_KEY` and `NVIDIA_MODEL`). The final fallback sends
+the email subject and body to that provider.
+
+Other modes are `rule_based`, `laya` (local option scoring), and
+`llm` (hosted model). For the cascade or `llm`, `EMAIL_LLM_PROVIDER` selects `nvidia`, `gemini`,
 or `huggingface`. The pipeline CLI and web application use this setting;
 the standalone Laya/LLM commands still run their named classifier directly.
 Process environment values override `.env`. Restart after changing model,
@@ -56,6 +65,8 @@ To add a strategy, extend the enum and register its factory in
 `averis_email/classifier.py`. Invalid modes trigger a classification error and
 human review, rather than silently selecting a different mode.
 
+In cascade mode, unresolved LLM outcomes stop the pipeline for human review;
+classification details include each attempted backend. In standalone modes,
 Laya/LLM review outcomes stop the pipeline before attachment processing. The
 existing submission contract uses `GENERAL`/`unreadable` as compatibility
 placeholders with `NEEDS_REVIEW`; the original null category, detailed review
@@ -138,3 +149,17 @@ field extractor. Review/error outcomes stop comparison as unreadable documents.
 ```bash
 PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 ```
+
+### Connected frontend
+
+The API now serves the frontend at `/ui/`, with persistent case results, original
+attachment downloads, human review and retry. Set `AVERIS_INBOX_SOURCE` to the
+bundle directory containing `inbox/` and `attachments/`, then run:
+
+```bash
+uvicorn averis_email.web:app --reload --port 8000
+```
+
+Open `http://localhost:8000/ui/`. See the
+[frontend/API audit and integration guide](docs/frontend-api.md) for endpoints,
+field mappings, configuration and workflow behavior.

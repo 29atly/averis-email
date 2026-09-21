@@ -72,12 +72,19 @@ def build_report(results: list) -> str:
     """One line per email plus a summary count at the top -- the
     'human-readable report' half of Stage 8 (the other half is
     submission.json). Takes a list of PipelineResult."""
-    lines = [human_readable(r) for r in results]
+    lines = []
+    for result in results:
+        lines.append(human_readable(result))
+        if result.status == 'NEEDS_REVIEW' and result.review_context:
+            context = result.review_context
+            lines.append(f'Stage: {context.stage}')
+            lines.append(str(context.original_email.get('body') or ''))
+            lines.extend(f'{item.path}: {item.download_url}' for item in context.attachments)
 
     comparisons = [r for r in results if r.category == "BL_COMPARISON"]
     ok = sum(1 for r in comparisons if r.status == "OK")
     mismatch = sum(1 for r in comparisons if r.status == "MISMATCH")
-    review = sum(1 for r in comparisons if r.status == "NEEDS_REVIEW")
+    review = sum(1 for r in results if r.status == "NEEDS_REVIEW")
 
     summary = (
         f"Total emails: {len(results)}  |  "

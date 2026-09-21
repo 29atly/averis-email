@@ -23,7 +23,6 @@ def norm_port(value) -> Optional[str]:
     text = re.sub(r"\s+", " ", text).strip()
     text = text.upper()
 
-    # Example: "Port Klang (MYPKG)" -> "PORT KLANG"
     text = re.sub(r"\s*\([A-Z]{2}[A-Z0-9]{3}\)\s*$", "", text)
 
     return text.strip(" .,;:") or None

@@ -6,20 +6,17 @@
   const comparison = item.category === 'bl_comparison';
   const differences = comparison ? getDifferences(item) : [];
   const initials = item.sender.split('@')[0].split(/[._-]/).slice(0, 2).map(part => part.charAt(0).toUpperCase()).join('') || 'EM';
-  const attachments = comparison ? [
-    { name: item.siFile, type: 'Shipping Instruction' },
-    { name: item.blFile, type: 'Draft Bill of Lading' }
-  ] : (item.attachments || []).map(name => ({ name, type: 'Attachment' }));
+  const attachments = item.attachments || [];
 
   let outcome;
-  if (!comparison) {
+  if (item.status === 'review') {
+    outcome = { tone: 'review', title: 'Human review required', copy: item.reviewReason, action: `<a class="primary-button" href="review.html?case=${encodeURIComponent(item.id)}">Review case</a>` };
+  } else if (!comparison) {
     outcome = { tone: 'classified', title: `Classified as ${categoryLabels[item.category]}`, copy: 'No document comparison is required for this email.', action: '' };
-  } else if (item.status === 'review') {
-    outcome = { tone: 'review', title: 'Human review required', copy: item.reviewReason, action: `<a class="primary-button" href="review.html?case=${item.id}">Review uncertain values</a>` };
   } else if (differences.length) {
-    outcome = { tone: 'mismatch', title: `${differences.length} mismatches detected`, copy: 'The Shipping Instruction and draft Bill of Lading contain different shipment details.', action: `<a class="primary-button" href="comparison.html?case=${item.id}">View document comparison</a>` };
+    outcome = { tone: 'mismatch', title: `${differences.length} mismatches detected`, copy: 'The Shipping Instruction and draft Bill of Lading contain different shipment details.', action: `<a class="primary-button" href="comparison.html?case=${encodeURIComponent(item.id)}">View document comparison</a>` };
   } else {
-    outcome = { tone: 'match', title: 'No mismatch detected', copy: 'All 7 required shipment fields match. No action is required.', action: `<a class="secondary-button" href="comparison.html?case=${item.id}">View comparison details</a>` };
+    outcome = { tone: 'match', title: 'No mismatch detected', copy: 'All 7 required shipment fields match. No action is required.', action: `<a class="secondary-button" href="comparison.html?case=${encodeURIComponent(item.id)}">View comparison details</a>` };
   }
 
   container.innerHTML = `
@@ -37,7 +34,7 @@
         <span class="sender-time">${escapeHTML(item.receivedLabel)}</span>
       </div>
       <div class="message-body">${escapeHTML(item.body)}</div>
-      ${attachments.length ? `<section class="attachment-area"><h2>${attachments.length} attachments</h2><div class="attachment-grid">${attachments.map((attachment, index) => `<a class="attachment-card" href="${comparison ? `evidence.html?case=${item.id}&field=shipper&document=${index === 0 ? 'si' : 'bl'}` : '#'}"><span class="attachment-thumb">TEXT</span><span><span class="attachment-name">${escapeHTML(attachment.name)}</span><span class="attachment-type">${escapeHTML(attachment.type)}</span></span></a>`).join('')}</div></section>` : ''}
+      ${attachments.length ? `<section class="attachment-area"><h2>${attachments.length} attachments</h2><div class="attachment-grid">${attachments.map(attachment => `<a class="attachment-card" href="${escapeHTML(window.ShippingStore.downloadURL(attachment.download_url))}"><span class="attachment-thumb">FILE</span><span><span class="attachment-name">${escapeHTML(attachment.name)}</span><span class="attachment-type">Original attachment</span></span></a>`).join('')}</div></section>` : ''}
       <div class="result-banner ${outcome.tone}"><div><strong>${escapeHTML(outcome.title)}</strong><p>${escapeHTML(outcome.copy)}</p></div>${outcome.action}</div>
     </article>`;
 })();

@@ -11,8 +11,9 @@
   const preview = item => item.body.replace(/\s+/g, ' ').trim().slice(0, 105);
   const categoryTone = category => ({ bl_comparison: 'blue', si_request: 'purple', invoice_query: 'orange', general: 'gray', spam: 'red' })[category] || 'gray';
   const resultFor = item => {
-    if (item.category !== 'bl_comparison') return { label: 'Classification complete', tone: 'gray' };
+    if (item.status === 'pending') return { label: 'Open to process', tone: 'gray' };
     if (item.status === 'review') return { label: 'Needs human review', tone: 'orange' };
+    if (item.category !== 'bl_comparison') return { label: 'Classification complete', tone: 'gray' };
     const differences = getDifferences(item);
     if (differences.length) return { label: `${differences.length} mismatches found`, tone: 'red' };
     return { label: 'No mismatch detected', tone: 'teal' };

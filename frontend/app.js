@@ -15,7 +15,7 @@
     { id: 'inbox', href: 'index.html', icon: icons.queue, label: 'Work Queue', count: window.ShippingStore?.cases.length || 0 },
     { id: 'review', href: 'review.html', icon: icons.review, label: 'Needs Human Review', count: reviewCount },
     { id: 'completed', href: 'index.html?view=completed', icon: icons.complete, label: 'Completed Cases', count: completedCount },
-    { id: 'activity', href: `activity.html${selected ? `?case=${selected.id}` : ''}`, icon: icons.history, label: 'Activity History', count: '' }
+    { id: 'activity', href: `activity.html${selected ? `?case=${encodeURIComponent(selected.id)}` : ''}`, icon: icons.history, label: 'Activity History', count: '' }
   ];
   const navigationActive = active === 'inbox' && listView === 'completed' ? 'completed' : active === 'message' || active === 'comparison' || active === 'evidence' ? 'inbox' : active;
 
@@ -64,11 +64,11 @@
     const { cases, fieldDefinitions, getCase, selectCase } = window.ShippingStore;
     const queue = cases.filter(item => item.status === 'review');
     let reviewItem = getCase();
-    if (!queue.some(entry => entry.id === reviewItem.id)) reviewItem = queue[0];
+    if (!queue.some(entry => entry.id === reviewItem?.id)) reviewItem = queue[0];
     if (reviewItem) selectCase(reviewItem.id);
     document.getElementById('queueCount').textContent = queue.length;
     document.getElementById('queueList').innerHTML = queue.length ? queue.map(entry => `
-      <a class="queue-item ${entry.id === reviewItem?.id ? 'active' : ''}" href="review.html?case=${entry.id}">
+      <a class="queue-item ${entry.id === reviewItem?.id ? 'active' : ''}" href="review.html?case=${encodeURIComponent(entry.id)}">
         <strong>${escapeHTML(entry.subject)}</strong><span>${escapeHTML(entry.id)} · ${escapeHTML(titleCase(entry.reviewReasonCode || 'review required'))}</span>
       </a>`).join('') : '<div class="empty">The human review queue is clear.</div>';
     const detail = document.getElementById('reviewDetail');
@@ -77,33 +77,29 @@
     } else {
       const reviewFields = reviewItem.reviewFields || [];
       const fieldName = key => fieldDefinitions.find(([field]) => field === key)?.[1] || titleCase(key);
-      const evidenceBlocks = reviewFields.map(key => {
-        const pair = reviewItem.values[key];
-        return `<div class="review-columns"><div class="evidence-snippet"><span class="doc-type">Shipping Instruction · ${escapeHTML(fieldName(key))}</span><h3>${escapeHTML(pair[0].file_path)}</h3><small>Page ${pair[0].page_number}</small><div class="source-quote">${escapeHTML(pair[0].source_text)}</div></div><div class="evidence-snippet"><span class="doc-type">Draft Bill of Lading · ${escapeHTML(fieldName(key))}</span><h3>${escapeHTML(pair[1].file_path)}</h3><small>Page ${pair[1].page_number}</small><div class="source-quote">${escapeHTML(pair[1].source_text)}</div></div></div>`;
-      }).join('');
-      const inputs = reviewFields.map(key => {
-        const suggested = reviewItem.values[key][1].normalized ?? reviewItem.values[key][1].raw;
-        return `<div><label for="field-${key}">Confirmed ${escapeHTML(fieldName(key))}</label><input id="field-${key}" data-review-field="${key}" value="${escapeHTML(suggested)}" autocomplete="off"></div>`;
-      }).join('');
-      detail.innerHTML = `<div class="case-banner"><div><span class="kicker">${escapeHTML(reviewItem.id)} · Decision needed</span><h2>${escapeHTML(reviewItem.subject)}</h2><p>${escapeHTML(reviewItem.siFile)} compared with ${escapeHTML(reviewItem.blFile)}</p></div><span class="pill orange">${reviewFields.length} values need confirmation</span></div><div class="review-detail"><div class="review-alert"><h2>Why this needs you</h2><p>${escapeHTML(reviewItem.reviewReason)}</p></div>${evidenceBlocks}<form class="review-form" id="reviewForm"><div class="review-fields">${inputs}</div><div class="button-row"><button class="primary-button" type="submit">Confirm values and continue</button><a class="secondary-button" href="message.html?case=${reviewItem.id}">Back to email</a><button class="secondary-button" type="button" id="retryButton">Retry extraction</button></div></form></div>`;
-      document.getElementById('reviewForm').addEventListener('submit', event => {
+      const inputs = reviewItem.canConfirmValues ? reviewFields.map(key => ['si', 'bl'].map((side, index) => {
+        const value = reviewItem.values[key][index];
+        return `<div><label>${side.toUpperCase()} · ${escapeHTML(fieldName(key))}</label><p>${escapeHTML(value.source_text || 'No source text available')}</p><input data-side="${side}" data-review-field="${key}" value="${escapeHTML(value.normalized == null ? '' : value.raw)}" required></div>`;
+      }).join('')).join('') : '';
+      const categoryInput = !reviewItem.siFile && !reviewItem.blFile ? `<label>Confirm classification<select id="reviewCategory"><option value="">Choose category</option>${Object.entries(window.ShippingStore.categoryLabels).filter(([key]) => key !== 'unclassified').map(([key, label]) => `<option value="${key.toUpperCase()}">${escapeHTML(label)}</option>`).join('')}</select></label>` : '';
+      detail.innerHTML = `<div class="case-banner"><div><span class="kicker">${escapeHTML(reviewItem.id)} · Decision needed</span><h2>${escapeHTML(reviewItem.subject)}</h2></div></div><div class="review-detail"><div class="review-alert"><h2>Why this needs you</h2><p>${escapeHTML(reviewItem.reviewReason)}</p></div><form class="review-form" id="reviewForm"><div class="review-fields">${inputs}${categoryInput}</div><div class="button-row">${inputs || categoryInput ? '<button class="primary-button" type="submit">Confirm and continue</button>' : ''}<a class="secondary-button" href="message.html?case=${encodeURIComponent(reviewItem.id)}">View original email and attachments</a><button class="secondary-button" type="button" id="retryButton">Retry processing</button></div></form></div>`;
+      document.getElementById('reviewForm').addEventListener('submit', async event => {
         event.preventDefault();
-        const fields = {};
-        let valid = true;
-        document.querySelectorAll('[data-review-field]').forEach(input => {
-          const value = input.value.trim();
-          if (!value) valid = false;
-          fields[input.dataset.reviewField] = value;
-        });
-        if (!valid) return notify('Confirm every uncertain value before continuing');
-        let resolutions = {};
-        try { resolutions = JSON.parse(localStorage.getItem('shippingReviewResolutions') || '{}'); } catch (_) {}
-        resolutions[reviewItem.id] = { fields };
-        localStorage.setItem('shippingReviewResolutions', JSON.stringify(resolutions));
-        selectCase(reviewItem.id);
-        location.href = `comparison.html?case=${reviewItem.id}`;
+        const payload = { revision: reviewItem.revision, si: {}, bl: {} };
+        document.querySelectorAll('[data-review-field]').forEach(input => { payload[input.dataset.side][input.dataset.reviewField] = input.value.trim(); });
+        const category = document.getElementById('reviewCategory')?.value;
+        if (category) payload.category = category;
+        const button = event.submitter; button.disabled = true;
+        try {
+          const result = await window.ShippingStore.review(reviewItem.id, payload);
+          location.href = `${result.category === 'bl_comparison' ? 'comparison' : 'message'}.html?case=${encodeURIComponent(result.id)}`;
+        } catch (error) { notify(error.message); button.disabled = false; }
       });
-      document.getElementById('retryButton').addEventListener('click', () => notify('Retry queued. This case remains visible while processing.'));
+      document.getElementById('retryButton').addEventListener('click', async event => {
+        event.target.disabled = true; notify('Processing email again…');
+        try { await window.ShippingStore.retry(reviewItem.id); location.reload(); }
+        catch (error) { notify(error.message); event.target.disabled = false; }
+      });
     }
   }
 })();

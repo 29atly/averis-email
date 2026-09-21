@@ -64,6 +64,8 @@ class AttachmentResolutionResult(BaseModel):
     classification (deciding the category itself) stays classify_email()'s
     job, not this one's.
     """
+    si_doc: Optional[ExtractedDoc] = None
+    bl_doc: Optional[ExtractedDoc] = None
     si_path: Optional[str] = None
     bl_path: Optional[str] = None
     review_required: bool = False
@@ -71,7 +73,19 @@ class AttachmentResolutionResult(BaseModel):
     warnings: list[str] = Field(default_factory=list)  # human-readable notes
 
 
+class ReviewAttachment(BaseModel):
+    path: str
+    download_url: str
+
+
+class ReviewContext(BaseModel):
+    stage: str
+    original_email: dict[str, Any]
+    attachments: list[ReviewAttachment] = Field(default_factory=list)
+
+
 class PipelineResult(BaseModel):
+    review_context: Optional[ReviewContext] = None
     email_id: str
     category: str
     status: Optional[str] = None

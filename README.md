@@ -149,3 +149,17 @@ field extractor. Review/error outcomes stop comparison as unreadable documents.
 ```bash
 PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 ```
+
+### Connected frontend
+
+The API now serves the frontend at `/ui/`, with persistent case results, original
+attachment downloads, human review and retry. Set `AVERIS_INBOX_SOURCE` to the
+bundle directory containing `inbox/` and `attachments/`, then run:
+
+```bash
+uvicorn averis_email.web:app --reload --port 8000
+```
+
+Open `http://localhost:8000/ui/`. See the
+[frontend/API audit and integration guide](docs/frontend-api.md) for endpoints,
+field mappings, configuration and workflow behavior.

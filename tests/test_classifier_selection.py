@@ -93,6 +93,8 @@ class SelectionTests(unittest.TestCase):
                 result = run_pipeline(None, {'email_id': 'test', 'body': 'Unclear'})
             self.assertEqual(result.status, 'NEEDS_REVIEW')
             self.assertEqual(len(result.diff_detail['classification']['attempts']), 3)
+            self.assertEqual(result.review_context.original_email,
+                             {'email_id': 'test', 'body': 'Unclear'})
             self.assertNotIn('secret', str(result))
             attachments.assert_not_called()
 

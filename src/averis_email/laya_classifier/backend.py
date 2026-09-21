@@ -67,6 +67,9 @@ class LocalLayaBackend:
             directory = snapshot_download(
                 "convaiinnovations/laya", revision=s.revision,
                 allow_patterns=files, cache_dir=str(s.cache_dir),
+                # Serialize cache setup: Hub 0.36's symlink probe can race on
+                # Windows and attempt privileged symlinks instead of copying.
+                max_workers=1,
                 local_files_only=s.local_files_only,
                 token=s.hf_token.get_secret_value() if s.hf_token else None)
             agent = laya.load(directory, device=s.device, subfolder="multilingual" if prefix else None)

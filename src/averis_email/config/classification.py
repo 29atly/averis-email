@@ -6,13 +6,14 @@ from dotenv import dotenv_values
 
 
 class ClassifierMode(StrEnum):
+    CASCADE = "cascade"
     RULE_BASED = "rule_based"
     LAYA = "laya"
     LLM = "llm"
 
 
 CLASSIFIER_MODES = tuple(mode.value for mode in ClassifierMode)
-DEFAULT_CLASSIFIER_MODE = ClassifierMode.RULE_BASED
+DEFAULT_CLASSIFIER_MODE = ClassifierMode.CASCADE
 
 
 def get_classifier_mode(env_file=".env") -> ClassifierMode:

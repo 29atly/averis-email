@@ -39,8 +39,7 @@
       <span class="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></span>
       <span class="sr-only">Search emails and shipping documents</span>
       <input id="globalSearch" type="search" placeholder="Search emails and shipping documents" autocomplete="off">
-    </label>
-    <div class="pipeline-state"><span></span>Pipeline connected</div>`;
+    </label>`;
 
   const search = document.getElementById('globalSearch');
   if (active !== 'inbox') {

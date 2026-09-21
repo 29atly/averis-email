@@ -57,7 +57,20 @@ h1 { font-size: clamp(1.5rem, 2.3vw, 2rem); font-weight: 600; letter-spacing: -.
 .overview-item:last-child { border-radius: 0 18px 18px 0; }
 .mailbox-heading { margin: 0 20px 14px; padding: 6px; min-height: 54px; background: #edf1f6; border: 1px solid #dce3ed; border-radius: 17px; }
 .mailbox-tabs { gap: 2px; }
-.mailbox-tabs button { white-space: nowrap; font-size: .7rem; min-height: 40px; padding: 8px 11px; border-radius: 12px; }
+.mailbox-tabs button { position: relative; white-space: nowrap; font-size: .7rem; min-height: 40px; padding: 8px 11px; border-radius: 12px; }
+.mailbox-tabs button + button::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: -1px;
+  width: 1px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  opacity: .9;
+  pointer-events: none;
+}
+.mailbox-tabs button:focus-visible { outline: 2px solid #6c99d6; outline-offset: 1px; }
 .mailbox-tabs button.active { background: var(--glass); color: #235393; box-shadow: inset 0 1px 0 #fff, 0 2px 6px #213a6312; }
 .mailbox-count { padding: 0 10px; white-space: nowrap; font-size: .7rem; }
 .email-header, .email-row { grid-template-columns: 22px 32px minmax(110px,.8fr) minmax(170px,1.5fr) minmax(110px,.85fr) minmax(100px,.8fr) 65px; gap: 14px; padding-inline: 26px; }

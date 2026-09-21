@@ -193,6 +193,17 @@
   const MAX_FILES = 10;
   let pendingFiles = [];
   let composing = false;
+  let gmailRefreshPending = false;
+
+  window.addEventListener('mailroom:inbox', event => {
+    if (event.detail?.type !== 'gmail_sync' || !event.detail.ingested) return;
+    if (composeDialog.open) {
+      gmailRefreshPending = true;
+      notify(`${event.detail.ingested} new ${event.detail.ingested === 1 ? 'email is' : 'emails are'} waiting. Close this form to refresh.`);
+      return;
+    }
+    location.reload();
+  });
 
   const formatSize = bytes => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
@@ -246,6 +257,7 @@
   composeCancel.addEventListener('click', () => { if (!composing) composeDialog.close(); });
   composeDialog.addEventListener('cancel', event => { if (composing) event.preventDefault(); });
   composeDialog.addEventListener('click', event => { if (event.target === composeDialog && !composing) composeDialog.close(); });
+  composeDialog.addEventListener('close', () => { if (gmailRefreshPending) location.reload(); });
 
   composeFiles.addEventListener('change', () => { addFiles(composeFiles.files); composeFiles.value = ''; });
   ['dragover', 'dragenter'].forEach(name => composeDrop.addEventListener(name, event => { event.preventDefault(); composeDrop.classList.add('dragover'); }));

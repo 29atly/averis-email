@@ -24,6 +24,14 @@ Manually composed emails and their attachments are kept under
 `AVERIS_MANUAL_UPLOADS` (default `.cache/manual-uploads`), separate from
 `AVERIS_INBOX_SOURCE`.
 
+Open **Gmail Inbox Settings** in the left module bar to connect a dedicated Gmail
+account with a Google app password. When automatic reading is enabled, the server
+checks the inbox every 60 seconds and adds messages received after enablement to the
+work queue as pending cases. The first check establishes a mailbox baseline and does
+not import historical mail. Server-sent events refresh the queue when new mail is
+stored. Set `AVERIS_GMAIL_POLL=0` to disable polling or
+`AVERIS_GMAIL_POLL_INTERVAL` to change the successful-cycle interval.
+
 The inbox loads without inference. Opening a message processes it once and saves
 the result; retry runs it again. Review and completed filters include processed
 cases. Missing dates, recipients and source evidence are left blank.

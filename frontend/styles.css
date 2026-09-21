@@ -78,11 +78,15 @@ a { color: inherit; }
   color: #eef2f8;
   z-index: 10;
 }
-.brand { display: flex; align-items: center; gap: 11px; min-height: 48px; padding: 0 8px 18px 10px; }
-.brand-mark { flex: 0 0 36px; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; color: #bcd4ff; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .18); }
-.brand-mark svg { width: 21px; }
-.brand strong { display: block; font-size: .88rem; letter-spacing: -.015em; color: #fff; }
-.brand small { display: block; margin-top: 2px; color: rgba(255, 255, 255, .5); font-size: .66rem; }
+.brand { display: flex; align-items: center; min-height: 48px; padding: 0 10px 18px; }
+.brand-logo { position: relative; display: inline-flex; align-items: baseline; background: transparent; color: #f8fafc; line-height: 1; user-select: none; }
+.brand-logo::before { content: ''; position: absolute; z-index: 0; top: -3px; left: 1px; width: 34px; height: 12px; border-top: 5px solid #f59e0b; border-radius: 50%; transform: rotate(7deg); }
+.brand-wordmark { position: relative; z-index: 1; display: inline-flex; align-items: baseline; }
+.brand-averi { font-family: Georgia, 'Times New Roman', serif; font-size: 2rem; font-style: italic; font-weight: 700; letter-spacing: -.075em; }
+.brand-fy { margin-left: 4px; color: #f7a511; font-size: 1.12rem; font-weight: 800; letter-spacing: -.035em; }
+.brand-monogram { position: relative; z-index: 1; display: none; align-items: baseline; }
+.brand-monogram > span { font-family: Georgia, 'Times New Roman', serif; font-size: 1.75rem; font-style: italic; font-weight: 700; }
+.brand-monogram b { margin-left: 1px; color: #f7a511; font-size: .8rem; }
 .nav-label { padding: 5px 12px 8px 16px; color: rgba(255, 255, 255, .42); font-size: .64rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
 .module-nav { display: grid; gap: 3px; padding: 0 2px; }
 .module-nav a {
@@ -379,9 +383,8 @@ input:focus, select:focus, textarea:focus, .icon-button:focus-visible, .file-chi
   body { grid-template-columns: 184px minmax(0,1fr); }
   .sidebar { margin: 10px 4px 10px 8px; padding: 14px 6px 10px; }
   .brand { padding-inline: 6px 4px; }
-  .brand-mark { flex-basis: 32px; width: 32px; height: 32px; }
-  .brand strong { font-size: .74rem; }
-  .brand small { font-size: .58rem; }
+  .brand-averi { font-size: 1.72rem; }
+  .brand-fy { font-size: .96rem; }
   .module-nav a { padding-left: 9px; gap: 9px; font-size: .7rem; }
   .module-nav a b { font-size: .61rem; }
   .sidebar-profile { margin-left: 2px; padding-inline: 6px; grid-template-columns: 32px 1fr; gap: 7px; }
@@ -427,7 +430,9 @@ input:focus, select:focus, textarea:focus, .icon-button:focus-visible, .file-chi
   body { grid-template-columns: 64px minmax(0,1fr); }
   .sidebar { margin: 8px 2px 8px 6px; padding: 12px 4px 8px; }
   .brand { justify-content: center; padding-inline: 2px; }
-  .brand > div:last-child, .nav-label, .module-nav a > span:nth-child(2), .module-nav a b, .profile-copy { display: none; }
+  .brand-wordmark, .nav-label, .module-nav a > span:nth-child(2), .module-nav a b, .profile-copy { display: none; }
+  .brand-monogram { display: inline-flex; }
+  .brand-logo::before { top: -2px; left: 0; width: 22px; height: 9px; border-top-width: 4px; }
   .module-nav a { grid-template-columns: 1fr; justify-items: center; padding: 7px 4px; }
   .sidebar-profile { grid-template-columns: 1fr; justify-items: center; margin-inline: 0; padding-inline: 4px; }
   .email-row { grid-template-columns: 20px 22px minmax(0,1fr); min-height: 126px; }

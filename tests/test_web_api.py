@@ -16,6 +16,8 @@ from averis_email.ui_api import StateStore
 
 @pytest.fixture
 def api(tmp_path, monkeypatch):
+    # Unit/API tests must never start a real background IMAP connection.
+    monkeypatch.setenv('AVERIS_GMAIL_POLL', '0')
     (tmp_path / 'inbox').mkdir()
     (tmp_path / 'attachments').mkdir()
     (tmp_path / 'attachments' / 'si.txt').write_bytes(b'original SI\x00')
@@ -330,6 +332,44 @@ def test_gmail_settings_save_never_returns_password(api):
     assert again.json()['enabled'] is False
 
 
+def test_enabling_and_disabling_settings_controls_poller(api, monkeypatch):
+    client, _, _ = api
+    monkeypatch.setenv('AVERIS_GMAIL_POLL', '1')
+    instances = []
+
+    class FakePoller:
+        def __init__(self, *_args, **_kwargs):
+            self.running = False
+            instances.append(self)
+
+        def start(self):
+            self.running = True
+            return True
+
+        def stop(self):
+            self.running = False
+            return True
+
+    monkeypatch.setattr(web, 'GmailPoller', FakePoller)
+    enabled = client.put('/settings/gmail', json={
+        'address': 'ops@example.com', 'password': 'app-password-123', 'enabled': True})
+    assert enabled.status_code == 200
+    assert instances and instances[0].running is True
+
+    # Saving corrected credentials while enabled must replace a poller that
+    # may be sleeping in authentication backoff.
+    enabled_again = client.put('/settings/gmail', json={
+        'address': 'ops@example.com', 'password': 'corrected-password', 'enabled': True})
+    assert enabled_again.status_code == 200
+    assert len(instances) == 2
+    assert instances[0].running is False
+    assert instances[1].running is True
+
+    disabled = client.put('/settings/gmail', json={'address': 'ops@example.com', 'enabled': False})
+    assert disabled.status_code == 200
+    assert instances[1].running is False
+
+
 def test_gmail_settings_delete_clears_configuration(api):
     client, _, _ = api
     client.put('/settings/gmail', json={'address': 'ops@example.com', 'password': 'app-password-123'})
@@ -358,6 +398,16 @@ def test_gmail_test_connection_success(api, monkeypatch):
     assert response.status_code == 200
     assert response.json() == {'ok': True}
     login.assert_called_once_with('ops@example.com', 'pw')
+
+
+def test_gmail_test_connection_removes_display_spaces(api, monkeypatch):
+    client, _, _ = api
+    login = Mock()
+    monkeypatch.setattr(web, 'test_login', login)
+    response = client.post('/settings/gmail/test', json={
+        'address': 'ops@example.com', 'password': 'abcd efgh ijkl mnop'})
+    assert response.status_code == 200
+    login.assert_called_once_with('ops@example.com', 'abcdefghijklmnop')
 
 
 def test_gmail_test_connection_reuses_stored_credentials(api, monkeypatch):

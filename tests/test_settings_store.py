@@ -51,6 +51,17 @@ def test_blank_password_is_rejected_not_treated_as_clear(store):
     assert store.get()['password'] == 'app-password-123'
 
 
+def test_grouped_app_password_is_stored_without_spaces(store):
+    store.save('ops@example.com', password='abcd efgh ijkl mnop')
+    assert store.get()['password'] == 'abcdefghijklmnop'
+
+
+def test_legacy_grouped_password_is_normalized_when_read(store):
+    store.path.parent.mkdir(parents=True, exist_ok=True)
+    store.path.write_text(json.dumps({'address': 'ops@example.com', 'password': 'abcd efgh ijkl mnop'}))
+    assert store.get()['password'] == 'abcdefghijklmnop'
+
+
 def test_changing_address_resets_uid_checkpoint(store):
     store.save('old@example.com', password='pw')
     store.set_sync_state(uidvalidity=42, last_uid=99, ingested_count=7)
@@ -75,6 +86,15 @@ def test_set_sync_state_preserves_credentials(store):
     assert data['address'] == 'ops@example.com'
     assert data['password'] == 'app-password-123'
     assert data['ingested_count'] == 3
+
+
+def test_stale_sync_state_is_ignored_after_mailbox_change(store):
+    store.save('old@example.com', password='old-password', enabled=True)
+    store.save('new@example.com', password='new-password', enabled=True)
+    updated = store.set_sync_state(expected_address='old@example.com', uidvalidity=42, last_uid=99)
+    assert updated is False
+    assert store.get()['address'] == 'new@example.com'
+    assert store.get()['last_uid'] is None
 
 
 def test_file_written_with_restrictive_permissions(store):

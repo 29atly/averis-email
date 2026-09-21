@@ -15,7 +15,7 @@ async function boot(module, records, options = {}) {
       querySelectorAll() { return []; }, addEventListener(name, listener) { this.listeners[name] = listener; } });
     return elements.get(id);
   }
-  const context = { URLSearchParams, setTimeout, clearTimeout, console,
+  const context = { URLSearchParams, setTimeout, clearTimeout, console, addEventListener() {},
     location: { origin: 'http://localhost:8000', pathname: '/ui/index.html', search: options.search || '', reload() {} },
     localStorage: { getItem() { return null; }, setItem() {} },
     document: { body: { dataset: { module }, append(node) {
@@ -27,12 +27,14 @@ async function boot(module, records, options = {}) {
     fetch: async (url, init) => {
       requests.push({ url, init });
       if (options.fail) return { ok: false, status: 503, json: async () => ({ detail: 'Inbox unavailable' }) };
-      const body = url.includes('?limit=') ? records : records.find(item => url.includes(encodeURIComponent(item.id)));
+      const body = url.endsWith('/settings/gmail') && options.gmail ? options.gmail :
+        url.includes('?limit=') ? records : records.find(item => url.includes(encodeURIComponent(item.id)));
       return { ok: true, json: async () => body };
     } };
   context.window = context;
   vm.createContext(context);
   await vm.runInContext(fs.readFileSync('frontend/data.js', 'utf8'), context);
+  await new Promise(resolve => setTimeout(resolve, 0));
   return { context, elements, scripts, requests };
 }
 
@@ -78,4 +80,15 @@ test('connection errors are shown without displaying demo data', async () => {
   assert.equal(result.scripts.length, 0);
   assert.equal(result.context.ShippingStore, undefined);
   assert.equal(result.elements.get('main').children[1].textContent, 'Inbox unavailable');
+});
+
+test('Gmail settings loads without requiring an inbox dataset', async () => {
+  const gmail = { address: 'ops@example.com', configured: true, enabled: true,
+    last_poll_at: null, last_error: null, ingested_count: 3 };
+  const result = await boot('settings', [], { gmail });
+  assert.deepEqual(result.scripts, ['app.js', 'settings.js']);
+  assert.equal(result.requests.length, 1);
+  assert.match(result.requests[0].url, /\/settings\/gmail$/);
+  assert.equal(result.elements.get('gmailAddress').value, 'ops@example.com');
+  assert.equal(result.elements.get('gmailConnectionBadge').textContent, 'Reading new mail');
 });

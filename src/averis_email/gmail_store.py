@@ -6,6 +6,8 @@ verbatim -- never re-derived from the network on a later request.
 import json
 import os
 import re
+import shutil
+import tempfile
 from pathlib import Path, PurePosixPath
 
 from averis_email.manual_store import (ManualUploadError, list_records, resolve_prefixed_path,
@@ -43,38 +45,46 @@ class GmailStore:
         message is still ingested and the failure is recorded for display.
         """
         email_id = record['email_id']
+        if not ID_RE.fullmatch(email_id):
+            raise ValueError('invalid Gmail email id')
         final = self.root / email_id
         if final.is_dir():
             return json.loads((final / 'email.json').read_text())
 
         self.root.mkdir(parents=True, exist_ok=True)
-        staging = self.root / f'.tmp-{email_id}'
-        files_dir = staging / 'files'
-        files_dir.mkdir(parents=True)
+        # A unique staging directory means a process crash cannot leave a
+        # fixed .tmp path that wedges every subsequent retry of this UID.
+        staging = Path(tempfile.mkdtemp(prefix=f'.tmp-{email_id}-', dir=self.root))
+        try:
+            files_dir = staging / 'files'
+            files_dir.mkdir()
 
-        kept, skipped, seen_lower = [], [], set()
-        for name, data in attachments:
-            try:
-                clean_name, suffix = validate_filename(name)
-                if clean_name.lower() in seen_lower:
-                    raise ManualUploadError(f'Duplicate attachment name: {clean_name}')
-                validate_content(clean_name, suffix, data)
-            except ManualUploadError as exc:
-                skipped.append({'name': name, 'reason': str(exc)})
-                continue
-            seen_lower.add(clean_name.lower())
-            path = files_dir / clean_name
-            path.write_bytes(data)
-            os.chmod(path, 0o600)
-            kept.append(f'{PREFIX}/{email_id}/{clean_name}')
+            kept, skipped, seen_lower = [], [], set()
+            for name, data in attachments:
+                try:
+                    clean_name, suffix = validate_filename(name)
+                    if clean_name.lower() in seen_lower:
+                        raise ManualUploadError(f'Duplicate attachment name: {clean_name}')
+                    validate_content(clean_name, suffix, data)
+                except ManualUploadError as exc:
+                    skipped.append({'name': name, 'reason': str(exc)})
+                    continue
+                seen_lower.add(clean_name.lower())
+                path = files_dir / clean_name
+                path.write_bytes(data)
+                os.chmod(path, 0o600)
+                kept.append(f'{PREFIX}/{email_id}/{clean_name}')
 
-        full = {**record, 'attachments': kept}
-        if skipped:
-            full['skipped_attachments'] = skipped
-        (staging / 'email.json').write_text(json.dumps(full))
-        os.chmod(staging / 'email.json', 0o600)
-        os.replace(staging, final)
-        return full
+            full = {**record, 'attachments': kept}
+            if skipped:
+                full['skipped_attachments'] = skipped
+            (staging / 'email.json').write_text(json.dumps(full))
+            os.chmod(staging / 'email.json', 0o600)
+            os.replace(staging, final)
+            return full
+        finally:
+            if staging.exists():
+                shutil.rmtree(staging, ignore_errors=True)
 
     # -- attachment reads ------------------------------------------------
     def resolve(self, email_id, path):

@@ -2,41 +2,113 @@
 
 Use one worker: pipeline executions and review updates are serialized locally.
 """
+import asyncio
+from contextlib import asynccontextmanager
+import json
 import mimetypes
 import os
 from pathlib import Path, PurePosixPath
-from threading import RLock
+from threading import Condition, RLock
 from time import perf_counter
 from urllib.parse import quote, unquote
 from urllib.error import URLError
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from averis_email.data_loader import Inbox
 from averis_email.gmail_client import GmailAuthError, GmailConnectionError, test_login
+from averis_email.gmail_poller import GmailPoller
 from averis_email.gmail_store import GmailStore
 from averis_email.manual_store import CompositeLoader, ManualStore, ManualUploadError
 from averis_email.orchestrator import run_pipeline
 from averis_email.schemas import FieldValue, PipelineResult
-from averis_email.settings_store import GmailSettingsError, GmailSettingsStore
+from averis_email.settings_store import (GmailSettingsError, GmailSettingsStore,
+                                         normalize_app_password)
 from averis_email.stages import comparison, validation
 from averis_email.ui_api import (Case, GmailSettings, GmailSettingsRequest, GmailTestRequest,
                                  ReviewRequest, StateStore, event, to_case)
 
 load_dotenv()
-app = FastAPI(title='Averis Email Pipeline API')
-app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'])
 INBOX = Inbox(os.getenv('AVERIS_INBOX_SOURCE', 'data'))
 MANUAL = ManualStore(os.getenv('AVERIS_MANUAL_UPLOADS', '.cache/manual-uploads'))
 GMAIL_STORE = GmailStore(os.getenv('AVERIS_GMAIL_STORE', '.cache/gmail-inbox'))
 GMAIL_SETTINGS = GmailSettingsStore(os.getenv('AVERIS_GMAIL_CONFIG', '.cache/gmail-config.json'))
 STORE = StateStore(os.getenv('AVERIS_UI_STATE', '.cache/ui-state.sqlite3'), namespace=INBOX.source)
 LOCK = RLock()
+GMAIL_POLLER = None
+
+
+class InboxEventBroker:
+    """Tiny process-local revision feed used by the SSE endpoint."""
+    def __init__(self):
+        self._condition = Condition()
+        self._revision = 0
+        self._payload = {}
+
+    def publish(self, payload):
+        with self._condition:
+            self._revision += 1
+            self._payload = payload
+            self._condition.notify_all()
+
+    def snapshot(self):
+        with self._condition:
+            return self._revision, self._payload
+
+    def wait(self, revision, timeout=15):
+        with self._condition:
+            if self._revision == revision:
+                self._condition.wait(timeout)
+            return self._revision, self._payload
+
+
+EVENTS = InboxEventBroker()
+
+
+def _gmail_poll_allowed():
+    return os.getenv('AVERIS_GMAIL_POLL', '1').strip().lower() not in {'0', 'false', 'no', 'off'}
+
+
+def _publish_poll(outcome):
+    EVENTS.publish({'type': 'gmail_sync', 'status': outcome.status,
+                    'ingested': outcome.ingested, 'skipped': outcome.skipped})
+
+
+def _start_gmail_poller():
+    global GMAIL_POLLER
+    if not _gmail_poll_allowed() or not GMAIL_SETTINGS.get().get('enabled'):
+        return False
+    if GMAIL_POLLER and GMAIL_POLLER.running:
+        return False
+    interval = int(os.getenv('AVERIS_GMAIL_POLL_INTERVAL', '60'))
+    GMAIL_POLLER = GmailPoller(GMAIL_SETTINGS, GMAIL_STORE, interval=interval,
+                               on_change=_publish_poll)
+    return GMAIL_POLLER.start()
+
+
+def _stop_gmail_poller():
+    global GMAIL_POLLER
+    poller, GMAIL_POLLER = GMAIL_POLLER, None
+    if poller:
+        poller.stop()
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    _start_gmail_poller()
+    try:
+        yield
+    finally:
+        _stop_gmail_poller()
+
+
+app = FastAPI(title='Averis Email Pipeline API', lifespan=lifespan)
+app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'])
 
 
 class EmailSummary(BaseModel):
@@ -103,15 +175,26 @@ def get_gmail_settings():
 @app.put('/settings/gmail', response_model=GmailSettings)
 def save_gmail_settings(request: GmailSettingsRequest):
     try:
-        GMAIL_SETTINGS.save(request.address, password=request.password, enabled=request.enabled)
+        saved = GMAIL_SETTINGS.save(request.address, password=request.password, enabled=request.enabled)
     except GmailSettingsError as exc:
         raise HTTPException(422, str(exc)) from exc
+    if saved['enabled']:
+        # Credentials can be corrected while an existing poller is waiting
+        # in authentication backoff. Restart it so the new settings are used
+        # immediately instead of making the user wait up to an hour.
+        _stop_gmail_poller()
+        _start_gmail_poller()
+    else:
+        _stop_gmail_poller()
+    EVENTS.publish({'type': 'gmail_settings', 'enabled': saved['enabled']})
     return GmailSettings(**GMAIL_SETTINGS.public())
 
 
 @app.delete('/settings/gmail', response_model=GmailSettings)
 def delete_gmail_settings():
+    _stop_gmail_poller()
     GMAIL_SETTINGS.clear()
+    EVENTS.publish({'type': 'gmail_settings', 'enabled': False})
     return GmailSettings(**GMAIL_SETTINGS.public())
 
 
@@ -122,7 +205,7 @@ def test_gmail_settings(request: GmailTestRequest = GmailTestRequest()):
     so re-testing a saved mailbox needs no re-entered password."""
     stored = GMAIL_SETTINGS.get()
     address = (request.address or stored.get('address') or '').strip()
-    password = request.password or stored.get('password')
+    password = normalize_app_password(request.password or stored.get('password'))
     if not address or not password:
         raise HTTPException(422, 'Enter an address and app password to test')
     try:
@@ -132,6 +215,25 @@ def test_gmail_settings(request: GmailTestRequest = GmailTestRequest()):
     except GmailConnectionError as exc:
         raise HTTPException(503, str(exc)) from exc
     return {'ok': True}
+
+
+@app.get('/events')
+async def live_events(request: Request):
+    """Server-sent inbox changes. EventSource reconnects automatically."""
+    async def stream():
+        revision, _payload = EVENTS.snapshot()
+        yield 'retry: 3000\n\n'
+        while not await request.is_disconnected():
+            next_revision, payload = await asyncio.to_thread(EVENTS.wait, revision, 15)
+            if next_revision == revision:
+                yield ': keepalive\n\n'
+                continue
+            revision = next_revision
+            yield f'event: inbox\ndata: {json.dumps(payload)}\n\n'
+
+    return StreamingResponse(stream(), media_type='text/event-stream', headers={
+        'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no',
+    })
 
 
 @app.get('/emails', response_model=list[EmailSummary])

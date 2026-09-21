@@ -92,6 +92,13 @@ def test_mailbox_status_parses_uidvalidity_and_uidnext(fake):
     assert fake.logged_out is True
 
 
+def test_mailbox_status_wraps_mid_connection_failure(fake, monkeypatch):
+    monkeypatch.setattr(fake, 'status', lambda *_: (_ for _ in ()).throw(imaplib.IMAP4.abort('socket closed')))
+    with pytest.raises(GmailConnectionError, match='status'):
+        mailbox_status('ops@example.com', 'good-password')
+    assert fake.logged_out is True
+
+
 def test_test_login_success_logs_out(fake):
     gmail_test_login('ops@example.com', 'good-password')
     assert fake.logged_out is True
@@ -140,6 +147,14 @@ def test_fetch_since_caps_messages_per_poll(fake, monkeypatch):
     fake.messages = {1: b'a', 2: b'b', 3: b'c', 4: b'd'}
     _, messages = fetch_since('ops@example.com', 'good-password', since_uid=0)
     assert [uid for uid, _, _ in messages] == [1, 2]
+
+
+def test_fetch_since_wraps_mid_connection_failure(fake, monkeypatch):
+    monkeypatch.setattr(fake, 'select', lambda *_args, **_kwargs:
+                        (_ for _ in ()).throw(imaplib.IMAP4.abort('connection lost')))
+    with pytest.raises(GmailConnectionError, match='fetch failed'):
+        fetch_since('ops@example.com', 'good-password', 0)
+    assert fake.logged_out is True
 
 
 def test_fetch_since_skips_oversized_message_but_advances_past_it(fake, monkeypatch):

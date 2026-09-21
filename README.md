@@ -163,3 +163,13 @@ uvicorn averis_email.web:app --reload --port 8000
 Open `http://localhost:8000/ui/`. See the
 [frontend/API audit and integration guide](docs/frontend-api.md) for endpoints,
 field mappings, configuration and workflow behavior.
+
+### Live Gmail inbox
+
+The web app can also read a dedicated Gmail inbox through read-only IMAP. Open
+**Gmail Inbox Settings** in the UI, enter the mailbox address and a Google app
+password, test the connection, and enable automatic reading. The first check starts
+from the current inbox tip; subsequent messages appear in the work queue as pending
+cases without changing their read state in Gmail. See
+[the Gmail implementation handover](docs/gmail-ingestion-handover.md) for polling,
+checkpoint, backoff, storage, and deployment details.

@@ -53,6 +53,9 @@ def connect(address, password, timeout=10):
     except imaplib.IMAP4.error as exc:
         _logout(conn)
         raise GmailAuthError(str(exc)) from exc
+    except (OSError, socket.timeout) as exc:
+        _logout(conn)
+        raise GmailConnectionError(f'Connection to {HOST} failed during login: {exc}') from exc
     return conn
 
 
@@ -79,6 +82,10 @@ def mailbox_status(address, password, timeout=10):
         if not uidvalidity or not uidnext:
             raise GmailConnectionError(f'Unexpected STATUS response: {raw!r}')
         return int(uidvalidity.group(1)), int(uidnext.group(1))
+    except GmailConnectionError:
+        raise
+    except (imaplib.IMAP4.error, OSError, socket.timeout) as exc:
+        raise GmailConnectionError(f'Could not read Gmail INBOX status: {exc}') from exc
     finally:
         _logout(conn)
 
@@ -144,5 +151,9 @@ def fetch_since(address, password, since_uid, timeout=30):
                 continue
             messages.append((uid, raw_bytes, None))
         return uidvalidity, messages
+    except GmailConnectionError:
+        raise
+    except (imaplib.IMAP4.error, OSError, socket.timeout) as exc:
+        raise GmailConnectionError(f'Gmail fetch failed: {exc}') from exc
     finally:
         _logout(conn)

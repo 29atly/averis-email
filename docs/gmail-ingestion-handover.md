@@ -1,9 +1,9 @@
-# Gmail ingestion — handover into Phase 2 (poller)
+# Gmail ingestion — live inbox implementation
 
-Status as of 2026-09-22: **Phases 0 and 1 are done and merged into the working tree
-(uncommitted).** Phase 2 (the background poller that actually calls the fetch layer on
-a schedule) has not been started. This doc is what the next person needs to pick it up
-without re-deriving Phases 0–1.
+Status as of 2026-09-22: **Phases 0–4 are implemented.** The IMAP transport, MIME
+parser, durable stores, scheduled poller, server-sent live updates, and Gmail Settings
+UI are connected. New inbox messages received after the mailbox is enabled appear as
+pending work-queue cases without importing the mailbox's historical backlog.
 
 ## Why this feature exists
 
@@ -30,7 +30,7 @@ running unattended on a VM.
    takes tens of seconds; running it inside the poller (single uvicorn worker) would
    stall every HTTP request. The existing "open case to process" and bulk-process UI
    paths already handle pending cases — Phase 2 only needs to make new mail *appear*.
-5. **SSE for live UI updates** (Phase 3, not yet built) — not WebSocket. One-way
+5. **SSE for live UI updates** (implemented in Phase 3) — not WebSocket. One-way
    server→client fits, `EventSource` auto-reconnects, no new dependency.
 6. **Auth / VM network hardening is explicitly out of scope** for this whole feature.
    The API has no authentication and CORS is `*`. This matters more once a
@@ -44,7 +44,7 @@ poller architecture options) lives in the approved plan file used to build this,
 **not** in the repo, so treat this doc as the source of truth going forward instead of
 chasing that path down.
 
-## What exists now (Phases 0–1)
+## What exists now (Phases 0–4)
 
 ```
 IMAP (Gmail)
@@ -62,7 +62,12 @@ gmail_store.py           -- disk persistence (GmailStore, sibling of ManualStore
 web.py: emails() / CompositeLoader / attachment download route
     |
     v
-existing pipeline + UI (unchanged)
+existing pipeline + UI
+
+gmail_poller.py          -- 60s background cycle, UID checkpoint, bounded backoff
+    |
+    v
+web.py: /events (SSE) --> browser work-queue refresh
 ```
 
 Settings (mailbox address, app password, enabled flag, **and the UID sync
@@ -77,8 +82,10 @@ checkpoint**) live in `settings_store.py` / `GmailSettingsStore`, a single JSON 
 | `src/averis_email/gmail_client.py` | `connect`/`test_login` (Phase 0), `mailbox_status(address, password)` → `(uidvalidity, uidnext)`, `fetch_since(address, password, since_uid)` → `(uidvalidity, [(uid, raw_bytes_or_None, skipped_reason_or_None), ...])`. Read-only (`EXAMINE`), capped at `MAX_MESSAGES_PER_POLL=20` per call, skips messages over `MAX_MESSAGE_BYTES=30MB` without blocking the checkpoint. Raises `GmailAuthError` vs `GmailConnectionError` — the poller must treat these differently (see Backoff below). |
 | `src/averis_email/gmail_mime.py` | `parse_message(raw, uid, uidvalidity)` → `(record, attachments)`. Pure function, no I/O. `record['email_id']` is `gmail_{uidvalidity}_{uid}`. |
 | `src/averis_email/gmail_store.py` | `GmailStore.ingest(record, attachments)` — idempotent on `email_id` (safe to call twice with the same UID after a crash), skips invalid attachments while keeping the message, writes atomically. `.emails()`, `.read_bytes()`, `.resolve()` for the existing loader/download contract. |
+| `src/averis_email/gmail_poller.py` | `run_once(settings, store)` performs one testable synchronization cycle. `GmailPoller` owns the daemon thread, immediate shutdown, and authentication/network backoff. |
 | `src/averis_email/manual_store.py` | Gained two shared helpers used by both `ManualStore` and `GmailStore`: `list_records(root, id_re)` and `resolve_prefixed_path(root, prefix, email_id, path)`. `CompositeLoader` now takes an optional third `gmail=` store. |
-| `src/averis_email/web.py` | `GMAIL_STORE` and `GMAIL_SETTINGS` singletons; `emails()` merges `manual + gmail + records`; `/settings/gmail` (GET/PUT/DELETE) + `/settings/gmail/test` (POST) endpoints; attachment download route handles the `gmail/` path prefix. |
+| `src/averis_email/web.py` | Gmail stores/settings, poller lifespan management, merged email listing, settings endpoints, attachment downloads, and `/events` SSE updates. |
+| `frontend/settings.html`, `frontend/settings.js` | User-facing Gmail address/app-password setup, connection testing, enable/disable, removal, and synchronization status. |
 
 ### API surface already built (Phase 0)
 
@@ -89,11 +96,11 @@ checkpoint**) live in `settings_store.py` / `GmailSettingsStore`, a single JSON 
 
 ### Tests
 
-33 tests across `tests/test_settings_store.py`, `tests/test_gmail_mime.py`,
-`tests/test_gmail_client.py`, `tests/test_gmail_store.py`, plus additions to
-`tests/test_web_api.py` (settings endpoints + one full ingest→list→process→download
-end-to-end test using the real `GmailStore`). Full suite: `.venv/bin/python -m pytest
-tests/ -q --ignore=tests/read_pdf_examples.py` → 200 passed, 1 pre-existing skip.
+Tests cover settings, MIME parsing, IMAP behavior, disk persistence, poll cycles,
+thread lifecycle, settings endpoints, and ingest→list→process→download integration.
+Current verification: `.venv/bin/python -m pytest tests/ -q
+--ignore=tests/read_pdf_examples.py` → 209 passed, 4 optional Laya skips, plus 118
+subtests. `node --test tests/frontend_api.test.cjs` → 5 passed.
 
 `tests/test_gmail_client.py` has a hand-rolled `FakeConn` that reproduces real
 `imaplib` response shapes (tuple-vs-bytes items, the `UID N:*` RFC 3501 quirk). Reuse
@@ -110,60 +117,23 @@ call `gmail_client.test_login(...)`, or alias on import (see
 just to import `web.py`) are in `.venv/`, not whatever `python3` resolves to on PATH.
 Use `.venv/bin/python -m pytest ...`.
 
-## Phase 2 scope: the poller
+## Implemented polling behavior
 
-Not yet built. New file: `src/averis_email/gmail_poller.py`.
-
-### Required behavior
-
-1. **A pure, single-cycle function** — e.g. `run_once(settings, store)` — that:
-   - Reads `settings.get()`.
-   - If not `enabled` or no `address`/`password`: no-op, return.
-   - If `last_uid is None` (never baselined) **or** a fresh `mailbox_status()` call
-     returns a different `uidvalidity` than stored: call `mailbox_status()`, set
-     `last_uid = uidnext - 1`, store the new `uidvalidity`, and **return without
-     ingesting** — this is the baseline step from decision 3 above ("all new mail
-     since enabled", not a backfill of the whole mailbox).
-   - Otherwise call `fetch_since(address, password, last_uid)`. For each
-     `(uid, raw, reason)` in ascending order:
-     - If `raw is not None`: `gmail_mime.parse_message(raw, uid, uidvalidity)`, then
-       `store.ingest(record, attachments)`.
-     - Either way (including a skipped/oversized message), advance
-       `last_uid = uid` and persist via `settings.set_sync_state(last_uid=uid, ...)`
-       **before** moving to the next UID — this is what makes a mid-cycle crash safe
-       (re-fetches at most one message; `GmailStore.ingest` is idempotent so a re-fetch
-       of an already-ingested UID is a no-op).
-   - On success, update `last_poll_at`, clear `last_error`, bump `ingested_count`.
-   - On `GmailAuthError`/`GmailConnectionError`, set `last_error` and let the caller
-     (the thread loop) decide backoff — this function should not sleep or retry itself.
-2. **The thread loop** wraps `run_once` in a daemon thread started from a FastAPI
-   `lifespan` handler in `web.py`, sleeping via `stop_event.wait(interval)` so shutdown
-   is immediate and cycles never overlap.
-   - **Gate startup** on both an env flag (e.g. `AVERIS_GMAIL_POLL != '0'`) and
-     `settings.get()['enabled']` — `tests/test_web_api.py`'s `api` fixture uses `with
-     TestClient(web.app) as client`, which fires `lifespan`. If the poller starts
-     unconditionally, every existing test will try a real IMAP connection. Check this
-     by running the full suite after wiring the lifespan hook — it must still show 200
-     passed with **zero** network calls.
-   - **Never hold `web.LOCK` across IMAP I/O.** A stalled socket would freeze every
-     HTTP request. The atomic-rename writes in `GmailStore.ingest` and
-     `GmailSettingsStore._write` are already safe without it.
-   - **Backoff on error:** auth failure → 60s → 1h (Gmail locks accounts after repeated
-     bad logins); network failure → 60s → 300s. Reset to 60s on the next success.
-3. Cap poll-to-poll work using the existing `gmail_client.MAX_MESSAGES_PER_POLL=20` —
-   a mailbox with a large backlog drains over several cycles rather than one huge
-   synchronous fetch.
-
-### Suggested test approach
-
-Test `run_once` directly and exhaustively (baseline-on-first-run, baseline-on-
-uidvalidity-change, normal ingest advancing the checkpoint, a message that fails MIME
-parsing, the crash-safety property — call `run_once` twice with the same fake mailbox
-state and confirm no duplicate `GmailStore` record). Monkeypatch
-`gmail_client.mailbox_status`/`fetch_since` the same way `test_web_api.py` already
-monkeypatches `web.test_login`. Do **not** try to test the thread/lifespan wrapper with
-real timing — assert it starts/stops by checking a `stop_event` or a thread-alive flag,
-with the loop body's single iteration exercised via `run_once` directly.
+- `run_once(settings, store)` is pure with respect to scheduling and is exhaustively
+  unit tested.
+- First enablement and UIDVALIDITY changes baseline to `UIDNEXT - 1` without a
+  historical backfill.
+- Later cycles fetch and persist new messages in UID order, checkpointing each one.
+- Oversized and malformed messages are skipped without wedging the mailbox; storage
+  failures do not advance the checkpoint.
+- The daemon starts from FastAPI lifespan or when an enabled configuration is saved,
+  and stops immediately when disabled, removed, or the application shuts down.
+- Authentication failures back off from 60 seconds to one hour; network failures from
+  60 seconds to five minutes. A successful cycle resets the backoff.
+- `AVERIS_GMAIL_POLL=0` disables the thread; `AVERIS_GMAIL_POLL_INTERVAL` controls the
+  successful-cycle interval (default 60 seconds).
+- `/events` sends inbox changes to the frontend. The work queue refreshes when new
+  messages arrive; the settings module refreshes connection status.
 
 ### Known follow-ups (from the original plan, not blocking Phase 2 but worth flagging)
 
@@ -173,14 +143,14 @@ with the loop body's single iteration exercised via `run_once` directly.
 - `emails()` re-reads every record from disk on every request; fine at hackathon scale,
   will need an mtime-keyed cache or a SQLite-backed listing once a live mailbox grows
   past a few thousand messages (Phase 5 in the original plan).
-- Phase 3 (SSE live updates) and Phase 4 (frontend Settings page) still don't exist —
-  Phase 2 only makes ingested mail visible after a manual page reload, same as every
-  other list in this app today.
+- Authentication/CORS hardening remains required before exposing the app to an
+  untrusted network. The current hackathon deployment assumption is local access or an
+  SSH tunnel.
 
 ## Heads-up: unrelated concurrent work
 
-While Phases 0–1 were being built, an **unrelated** in-progress change appeared in the
-working tree — an `attachment_override` parameter added to `run_pipeline`
+While Phases 0–1 were being built, an **unrelated** change was committed — an
+`attachment_override` parameter added to `run_pipeline`
 (`orchestrator.py`) and threaded through `process()` in `web.py`, plus changes to
 `tests/test_review_context.py`. This was not part of the Gmail work and nothing here
 depends on it, but it means `web.py` and `orchestrator.py` may look different from what

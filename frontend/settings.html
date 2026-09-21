@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Connect a Gmail inbox to AveriFY.">
+  <title>Gmail Inbox Settings · AveriFY</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%2308131d'/%3E%3Cpath d='M13 39h38l-6 10H20z' fill='%2328d7ba'/%3E%3Cpath d='M22 18h20v21H22z' fill='%23f3f5ee'/%3E%3Cpath d='M27 24h10M27 30h10' stroke='%2308131d' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="interface.css?v=4">
+  <script src="motion.js?v=1" defer></script>
+</head>
+<body data-module="settings">
+  <a class="skip-link" href="#mainContent">Skip to content</a>
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="app-frame">
+    <header class="topbar" id="topbar"></header>
+    <main class="module" id="mainContent" tabindex="-1">
+      <div class="module-heading">
+        <div><span class="kicker">Live mailbox connection</span><h1>Gmail inbox settings</h1><p>Connect the dedicated operations mailbox so new emails appear automatically in the work queue.</p></div>
+      </div>
+      <div class="settings-layout">
+        <form class="surface settings-card" id="gmailSettingsForm" novalidate>
+          <div class="settings-section-heading">
+            <div><span class="kicker">Mailbox credentials</span><h2>Connect Gmail</h2></div>
+            <span class="connection-badge" id="gmailConnectionBadge">Not configured</span>
+          </div>
+          <div class="settings-form-grid">
+            <label class="settings-field">
+              <span>Gmail address</span>
+              <input id="gmailAddress" type="email" autocomplete="username" placeholder="operations@example.com" required>
+            </label>
+            <label class="settings-field">
+              <span>Google app password</span>
+              <input id="gmailPassword" type="password" autocomplete="new-password" placeholder="Enter the 16-character app password">
+              <small id="passwordHint">The password is stored only on this server and is never returned to the browser.</small>
+            </label>
+            <label class="settings-switch">
+              <input id="gmailEnabled" type="checkbox">
+              <span><strong>Read new inbox emails automatically</strong><small>Checks Gmail every minute and leaves new messages unprocessed until a reviewer opens or selects them.</small></span>
+            </label>
+          </div>
+          <p class="settings-error" id="gmailSettingsError" role="alert" hidden></p>
+          <div class="settings-actions">
+            <button class="secondary-button" id="gmailTest" type="button">Test connection</button>
+            <button class="primary-button" id="gmailSave" type="submit">Save settings</button>
+          </div>
+        </form>
+
+        <aside class="settings-side">
+          <section class="surface sync-status-card">
+            <span class="kicker">Synchronization status</span>
+            <dl class="settings-stats">
+              <div><dt>Mailbox</dt><dd id="gmailStatusAddress">Not connected</dd></div>
+              <div><dt>Automatic reading</dt><dd id="gmailStatusEnabled">Off</dd></div>
+              <div><dt>Last checked</dt><dd id="gmailLastPoll">Not checked yet</dd></div>
+              <div><dt>Emails imported</dt><dd id="gmailIngestedCount">0</dd></div>
+            </dl>
+            <div class="sync-message" id="gmailLastError" hidden></div>
+          </section>
+          <section class="surface setup-help">
+            <span class="kicker">Before connecting</span>
+            <h2>Use a Google app password</h2>
+            <ol>
+              <li>Turn on two-step verification for the Gmail account.</li>
+              <li>Create an app password in the Google Account security settings.</li>
+              <li>Paste that password here, test the connection, then enable automatic reading.</li>
+            </ol>
+            <p>The mailroom reads Gmail in read-only mode. It will not mark messages as read or modify the mailbox.</p>
+          </section>
+          <button class="danger-link" id="gmailRemove" type="button" hidden>Remove Gmail connection</button>
+        </aside>
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="data.js?v=12"></script>
+</body>
+</html>

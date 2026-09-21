@@ -1,0 +1,522 @@
+Total emails: 520  |  Comparisons: 220 (OK: 0, MISMATCH: 0, NEEDS_REVIEW: 220)
+------------------------------------------------------------------------------
+email_001: NEEDS_REVIEW (unreadable)
+email_002: INVOICE_QUERY
+email_003: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_004: NEEDS_REVIEW (unreadable)
+email_005: NEEDS_REVIEW (unreadable)
+email_006: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_007: SI_REQUEST
+email_008: SI_REQUEST
+email_009: NEEDS_REVIEW (unreadable)
+email_010: INVOICE_QUERY
+email_011: GENERAL
+email_012: GENERAL
+email_013: NEEDS_REVIEW (unreadable)
+email_014: SI_REQUEST
+email_015: SPAM
+email_016: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_017: INVOICE_QUERY
+email_018: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_019: SI_REQUEST
+email_020: SI_REQUEST
+email_021: GENERAL
+email_022: SI_REQUEST
+email_023: SI_REQUEST
+email_024: INVOICE_QUERY
+email_025: NEEDS_REVIEW (unreadable)
+email_026: SPAM
+email_027: SI_REQUEST
+email_028: SI_REQUEST
+email_029: SI_REQUEST
+email_030: SI_REQUEST
+email_031: NEEDS_REVIEW (unreadable)
+email_032: NEEDS_REVIEW (unreadable)
+email_033: SI_REQUEST
+email_034: NEEDS_REVIEW (unreadable)
+email_035: SI_REQUEST
+email_036: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_037: GENERAL
+email_038: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_039: SI_REQUEST
+email_040: NEEDS_REVIEW (unreadable)
+email_041: INVOICE_QUERY
+email_042: SI_REQUEST
+email_043: NEEDS_REVIEW (unreadable)
+email_044: NEEDS_REVIEW (unreadable)
+email_045: INVOICE_QUERY
+email_046: NEEDS_REVIEW (unreadable)
+email_047: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_048: INVOICE_QUERY
+email_049: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_050: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_051: NEEDS_REVIEW (unreadable)
+email_052: NEEDS_REVIEW (unreadable)
+email_053: GENERAL
+email_054: SI_REQUEST
+email_055: NEEDS_REVIEW (unreadable)
+email_056: NEEDS_REVIEW (unreadable)
+email_057: SI_REQUEST
+email_058: NEEDS_REVIEW (unreadable)
+email_059: NEEDS_REVIEW (unreadable)
+email_060: INVOICE_QUERY
+email_061: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_062: INVOICE_QUERY
+email_063: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_064: NEEDS_REVIEW (unreadable)
+email_065: NEEDS_REVIEW (unreadable)
+email_066: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_067: SI_REQUEST
+email_068: NEEDS_REVIEW (unreadable)
+email_069: INVOICE_QUERY
+email_070: GENERAL
+email_071: NEEDS_REVIEW (unreadable)
+email_072: SPAM
+email_073: SI_REQUEST
+email_074: INVOICE_QUERY
+email_075: GENERAL
+email_076: GENERAL
+email_077: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_078: INVOICE_QUERY
+email_079: SI_REQUEST
+email_080: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_081: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_082: NEEDS_REVIEW (unreadable)
+email_083: GENERAL
+email_084: SI_REQUEST
+email_085: INVOICE_QUERY
+email_086: GENERAL
+email_087: INVOICE_QUERY
+email_088: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_089: GENERAL
+email_090: NEEDS_REVIEW (unreadable)
+email_091: NEEDS_REVIEW (unreadable)
+email_092: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_093: SI_REQUEST
+email_094: SI_REQUEST
+email_095: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_096: NEEDS_REVIEW (unreadable)
+email_097: NEEDS_REVIEW (unreadable)
+email_098: GENERAL
+email_099: INVOICE_QUERY
+email_100: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_101: SI_REQUEST
+email_102: INVOICE_QUERY
+email_103: SI_REQUEST
+email_104: INVOICE_QUERY
+email_105: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_106: SI_REQUEST
+email_107: NEEDS_REVIEW (unreadable)
+email_108: INVOICE_QUERY
+email_109: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_110: SI_REQUEST
+email_111: NEEDS_REVIEW (unreadable)
+email_112: INVOICE_QUERY
+email_113: NEEDS_REVIEW (unreadable)
+email_114: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_115: INVOICE_QUERY
+email_116: SPAM
+email_117: GENERAL
+email_118: NEEDS_REVIEW (unreadable)
+email_119: NEEDS_REVIEW (unreadable)
+email_120: SI_REQUEST
+email_121: NEEDS_REVIEW (unreadable)
+email_122: SI_REQUEST
+email_123: SPAM
+email_124: SI_REQUEST
+email_125: SI_REQUEST
+email_126: GENERAL
+email_127: SI_REQUEST
+email_128: NEEDS_REVIEW (unreadable)
+email_129: NEEDS_REVIEW (unreadable)
+email_130: SI_REQUEST
+email_131: SI_REQUEST
+email_132: NEEDS_REVIEW (unreadable)
+email_133: NEEDS_REVIEW (unreadable)
+email_134: SPAM
+email_135: SI_REQUEST
+email_136: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_137: SI_REQUEST
+email_138: SI_REQUEST
+email_139: INVOICE_QUERY
+email_140: SPAM
+email_141: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_142: INVOICE_QUERY
+email_143: NEEDS_REVIEW (unreadable)
+email_144: NEEDS_REVIEW (unreadable)
+email_145: NEEDS_REVIEW (unreadable)
+email_146: NEEDS_REVIEW (unreadable)
+email_147: GENERAL
+email_148: SI_REQUEST
+email_149: SI_REQUEST
+email_150: SPAM
+email_151: SI_REQUEST
+email_152: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_153: GENERAL
+email_154: SI_REQUEST
+email_155: INVOICE_QUERY
+email_156: SPAM
+email_157: SI_REQUEST
+email_158: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_159: GENERAL
+email_160: NEEDS_REVIEW (unreadable)
+email_161: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_162: SI_REQUEST
+email_163: SI_REQUEST
+email_164: SI_REQUEST
+email_165: INVOICE_QUERY
+email_166: SI_REQUEST
+email_167: NEEDS_REVIEW (unreadable)
+email_168: SI_REQUEST
+email_169: INVOICE_QUERY
+email_170: INVOICE_QUERY
+email_171: NEEDS_REVIEW (unreadable)
+email_172: SI_REQUEST
+email_173: GENERAL
+email_174: NEEDS_REVIEW (unreadable)
+email_175: NEEDS_REVIEW (unreadable)
+email_176: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_177: SI_REQUEST
+email_178: NEEDS_REVIEW (unreadable)
+email_179: INVOICE_QUERY
+email_180: SPAM
+email_181: SI_REQUEST
+email_182: NEEDS_REVIEW (unreadable)
+email_183: SI_REQUEST
+email_184: SPAM
+email_185: GENERAL
+email_186: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_187: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_188: SPAM
+email_189: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_190: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_191: INVOICE_QUERY
+email_192: SI_REQUEST
+email_193: SI_REQUEST
+email_194: GENERAL
+email_195: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_196: SI_REQUEST
+email_197: NEEDS_REVIEW (unreadable)
+email_198: NEEDS_REVIEW (unreadable)
+email_199: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_200: GENERAL
+email_201: SI_REQUEST
+email_202: SI_REQUEST
+email_203: INVOICE_QUERY
+email_204: SPAM
+email_205: SI_REQUEST
+email_206: SPAM
+email_207: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_208: NEEDS_REVIEW (unreadable)
+email_209: SI_REQUEST
+email_210: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_211: INVOICE_QUERY
+email_212: INVOICE_QUERY
+email_213: GENERAL
+email_214: SI_REQUEST
+email_215: SPAM
+email_216: INVOICE_QUERY
+email_217: SI_REQUEST
+email_218: GENERAL
+email_219: GENERAL
+email_220: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_221: SI_REQUEST
+email_222: SPAM
+email_223: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_224: INVOICE_QUERY
+email_225: NEEDS_REVIEW (unreadable)
+email_226: SPAM
+email_227: NEEDS_REVIEW (unreadable)
+email_228: SI_REQUEST
+email_229: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_230: GENERAL
+email_231: SPAM
+email_232: GENERAL
+email_233: SI_REQUEST
+email_234: GENERAL
+email_235: NEEDS_REVIEW (unreadable)
+email_236: INVOICE_QUERY
+email_237: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_238: GENERAL
+email_239: NEEDS_REVIEW (unreadable)
+email_240: SI_REQUEST
+email_241: GENERAL
+email_242: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_243: NEEDS_REVIEW (unreadable)
+email_244: SI_REQUEST
+email_245: SI_REQUEST
+email_246: SI_REQUEST
+email_247: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_248: SPAM
+email_249: NEEDS_REVIEW (unreadable)
+email_250: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_251: SI_REQUEST
+email_252: GENERAL
+email_253: SPAM
+email_254: SPAM
+email_255: GENERAL
+email_256: NEEDS_REVIEW (unreadable)
+email_257: SI_REQUEST
+email_258: GENERAL
+email_259: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_260: SI_REQUEST
+email_261: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_262: INVOICE_QUERY
+email_263: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_264: SI_REQUEST
+email_265: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_266: GENERAL
+email_267: SPAM
+email_268: INVOICE_QUERY
+email_269: INVOICE_QUERY
+email_270: NEEDS_REVIEW (unreadable)
+email_271: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_272: INVOICE_QUERY
+email_273: NEEDS_REVIEW (unreadable)
+email_274: INVOICE_QUERY
+email_275: NEEDS_REVIEW (unreadable)
+email_276: SI_REQUEST
+email_277: SI_REQUEST
+email_278: SI_REQUEST
+email_279: SI_REQUEST
+email_280: INVOICE_QUERY
+email_281: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_282: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_283: SI_REQUEST
+email_284: INVOICE_QUERY
+email_285: INVOICE_QUERY
+email_286: INVOICE_QUERY
+email_287: INVOICE_QUERY
+email_288: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_289: SI_REQUEST
+email_290: SI_REQUEST
+email_291: NEEDS_REVIEW (unreadable)
+email_292: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_293: SI_REQUEST
+email_294: GENERAL
+email_295: SI_REQUEST
+email_296: NEEDS_REVIEW (unreadable)
+email_297: GENERAL
+email_298: INVOICE_QUERY
+email_299: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_300: NEEDS_REVIEW (unreadable)
+email_301: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_302: NEEDS_REVIEW (unreadable)
+email_303: INVOICE_QUERY
+email_304: INVOICE_QUERY
+email_305: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_306: SI_REQUEST
+email_307: NEEDS_REVIEW (unreadable)
+email_308: SI_REQUEST
+email_309: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_310: SI_REQUEST
+email_311: SI_REQUEST
+email_312: NEEDS_REVIEW (unreadable)
+email_313: NEEDS_REVIEW (unreadable)
+email_314: INVOICE_QUERY
+email_315: SPAM
+email_316: INVOICE_QUERY
+email_317: SI_REQUEST
+email_318: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_319: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_320: SI_REQUEST
+email_321: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_322: SI_REQUEST
+email_323: GENERAL
+email_324: NEEDS_REVIEW (unreadable)
+email_325: GENERAL
+email_326: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_327: SI_REQUEST
+email_328: GENERAL
+email_329: SPAM
+email_330: GENERAL
+email_331: INVOICE_QUERY
+email_332: GENERAL
+email_333: GENERAL
+email_334: NEEDS_REVIEW (unreadable)
+email_335: NEEDS_REVIEW (unreadable)
+email_336: SI_REQUEST
+email_337: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_338: SI_REQUEST
+email_339: SI_REQUEST
+email_340: GENERAL
+email_341: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_342: NEEDS_REVIEW (unreadable)
+email_343: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_344: SI_REQUEST
+email_345: SPAM
+email_346: GENERAL
+email_347: GENERAL
+email_348: NEEDS_REVIEW (unreadable)
+email_349: NEEDS_REVIEW (unreadable)
+email_350: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_351: NEEDS_REVIEW (unreadable)
+email_352: SI_REQUEST
+email_353: SI_REQUEST
+email_354: NEEDS_REVIEW (unreadable)
+email_355: INVOICE_QUERY
+email_356: GENERAL
+email_357: SI_REQUEST
+email_358: SI_REQUEST
+email_359: SI_REQUEST
+email_360: SI_REQUEST
+email_361: NEEDS_REVIEW (unreadable)
+email_362: SI_REQUEST
+email_363: SPAM
+email_364: NEEDS_REVIEW (unreadable)
+email_365: SPAM
+email_366: GENERAL
+email_367: NEEDS_REVIEW (unreadable)
+email_368: SI_REQUEST
+email_369: INVOICE_QUERY
+email_370: SI_REQUEST
+email_371: SI_REQUEST
+email_372: INVOICE_QUERY
+email_373: INVOICE_QUERY
+email_374: INVOICE_QUERY
+email_375: INVOICE_QUERY
+email_376: SI_REQUEST
+email_377: NEEDS_REVIEW (unreadable)
+email_378: NEEDS_REVIEW (unreadable)
+email_379: NEEDS_REVIEW (unreadable)
+email_380: SI_REQUEST
+email_381: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_382: SPAM
+email_383: NEEDS_REVIEW (unreadable)
+email_384: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_385: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_386: INVOICE_QUERY
+email_387: SPAM
+email_388: SI_REQUEST
+email_389: INVOICE_QUERY
+email_390: SPAM
+email_391: NEEDS_REVIEW (unreadable)
+email_392: SPAM
+email_393: SI_REQUEST
+email_394: GENERAL
+email_395: SPAM
+email_396: GENERAL
+email_397: SI_REQUEST
+email_398: NEEDS_REVIEW (unreadable)
+email_399: GENERAL
+email_400: SI_REQUEST
+email_401: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_402: INVOICE_QUERY
+email_403: INVOICE_QUERY
+email_404: SPAM
+email_405: NEEDS_REVIEW (unreadable)
+email_406: INVOICE_QUERY
+email_407: NEEDS_REVIEW (unreadable)
+email_408: NEEDS_REVIEW (unreadable)
+email_409: NEEDS_REVIEW (unreadable)
+email_410: NEEDS_REVIEW (unreadable)
+email_411: NEEDS_REVIEW (unreadable)
+email_412: INVOICE_QUERY
+email_413: SI_REQUEST
+email_414: GENERAL
+email_415: GENERAL
+email_416: NEEDS_REVIEW (unreadable)
+email_417: SPAM
+email_418: GENERAL
+email_419: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_420: INVOICE_QUERY
+email_421: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_422: INVOICE_QUERY
+email_423: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_424: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_425: INVOICE_QUERY
+email_426: NEEDS_REVIEW (unreadable)
+email_427: SI_REQUEST
+email_428: NEEDS_REVIEW (unreadable)
+email_429: SI_REQUEST
+email_430: SI_REQUEST
+email_431: GENERAL
+email_432: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_433: SI_REQUEST
+email_434: NEEDS_REVIEW (unreadable)
+email_435: NEEDS_REVIEW (unreadable)
+email_436: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_437: SI_REQUEST
+email_438: SI_REQUEST
+email_439: INVOICE_QUERY
+email_440: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_441: GENERAL
+email_442: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_443: SI_REQUEST
+email_444: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_445: GENERAL
+email_446: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_447: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_448: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_449: SPAM
+email_450: SPAM
+email_451: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_452: INVOICE_QUERY
+email_453: NEEDS_REVIEW (unreadable)
+email_454: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_455: SPAM
+email_456: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_457: SPAM
+email_458: INVOICE_QUERY
+email_459: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_460: GENERAL
+email_461: INVOICE_QUERY
+email_462: NEEDS_REVIEW (unreadable)
+email_463: GENERAL
+email_464: GENERAL
+email_465: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_466: SI_REQUEST
+email_467: SI_REQUEST
+email_468: NEEDS_REVIEW (unreadable)
+email_469: SI_REQUEST
+email_470: SPAM
+email_471: INVOICE_QUERY
+email_472: INVOICE_QUERY
+email_473: INVOICE_QUERY
+email_474: NEEDS_REVIEW (unreadable)
+email_475: SI_REQUEST
+email_476: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_477: SI_REQUEST
+email_478: SI_REQUEST
+email_479: NEEDS_REVIEW (unreadable)
+email_480: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_481: NEEDS_REVIEW (unreadable)
+email_482: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_483: NEEDS_REVIEW (unreadable)
+email_484: SI_REQUEST
+email_485: SI_REQUEST
+email_486: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_487: SI_REQUEST
+email_488: GENERAL
+email_489: SPAM
+email_490: INVOICE_QUERY
+email_491: NEEDS_REVIEW (unreadable)
+email_492: INVOICE_QUERY
+email_493: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_494: NEEDS_REVIEW (unreadable)
+email_495: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_496: NEEDS_REVIEW (unreadable)
+email_497: INVOICE_QUERY
+email_498: NEEDS_REVIEW (unreadable)
+email_499: NEEDS_REVIEW (unreadable)
+email_500: INVOICE_QUERY
+email_501: NEEDS_REVIEW (unreadable)
+email_502: NEEDS_REVIEW (unreadable)
+email_503: NEEDS_REVIEW (unreadable)
+email_504: NEEDS_REVIEW (unreadable)
+email_505: NEEDS_REVIEW (unreadable)
+email_506: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_507: NEEDS_REVIEW (missing_attachment)  [warnings: No BL attachment identified]
+email_508: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_509: NEEDS_REVIEW (missing_attachment)  [warnings: No BL attachment identified]
+email_510: NEEDS_REVIEW (missing_attachment)  [warnings: No SI attachment identified; No BL attachment identified]
+email_511: NEEDS_REVIEW (unreadable)
+email_512: NEEDS_REVIEW (unreadable)
+email_513: NEEDS_REVIEW (unreadable)
+email_514: NEEDS_REVIEW (unreadable)
+email_515: NEEDS_REVIEW (unreadable)
+email_516: NEEDS_REVIEW (unreadable)
+email_517: NEEDS_REVIEW (unreadable)
+email_518: NEEDS_REVIEW (unreadable)
+email_519: NEEDS_REVIEW (unreadable)
+email_520: NEEDS_REVIEW (unreadable)

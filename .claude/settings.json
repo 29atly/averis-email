@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m pip install -q numpy)",
+      "Bash(python3 -m pytest tests/ -q)",
+      "Bash(grep -v \"DeprecationWarning\\\\|importlib._bootstrap\\\\|^$\")",
+      "Bash(git reset *)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(.venv/bin/python -m pytest tests/test_classification.py -xvs)"
+    ]
+  }
+}

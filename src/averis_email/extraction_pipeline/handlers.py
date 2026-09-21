@@ -1,20 +1,31 @@
-"""Handler boundaries for adding OCR, spreadsheet and text extraction later."""
+"""Adapters sharing the (path, plan) contract for registry dispatch."""
 from pathlib import Path
 
-from averis_email.stages.extraction import extract_pdf
+from .models import RoutingPlan
+from . import structured
+from .ocr import extract_ocr_pdf
 
 
-def extract_epdf(path: Path) -> dict:
-    return extract_pdf(path)
+def extract_epdf(path: Path, plan: RoutingPlan) -> dict:
+    return extract_ocr_pdf(path, page_details=plan.pages)
 
 
-def extract_with_ocr(path: Path) -> dict:
-    raise NotImplementedError("OCR extraction is not implemented; scanned or mixed PDFs require OCR.")
+def extract_with_ocr(path: Path, plan: RoutingPlan) -> dict:
+    return extract_ocr_pdf(path, page_details=plan.pages)
 
 
-def extract_xlsx(path: Path) -> dict:
-    raise NotImplementedError("XLSX extraction is not implemented.")
+def extract_xlsx(path: Path, plan: RoutingPlan) -> dict:
+    return structured.extract_xlsx(path)
 
 
-def extract_txt(path: Path) -> dict:
-    raise NotImplementedError("TXT extraction is not implemented.")
+def extract_docx(path: Path, plan: RoutingPlan) -> dict:
+    return structured.extract_docx(path)
+
+
+def extract_txt(path: Path, plan: RoutingPlan) -> dict:
+    return structured.extract_txt(path)
+
+
+def default_registry():
+    return {"pdf_extractor": extract_epdf, "ocr": extract_with_ocr,
+            "xlsx": extract_xlsx, "docx": extract_docx, "txt": extract_txt}

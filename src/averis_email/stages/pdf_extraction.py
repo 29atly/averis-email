@@ -103,23 +103,30 @@ def extract_pdf(path: str | Path, aliases: Mapping[str, Sequence[str]] = KEYWORD
     container-count inference are performed.
     """
     path = Path(path)
-    if path.suffix.lower() != ".pdf":
-        raise ValueError(f"Expected a PDF: {path}")
     occurrences = []
     empty_pages = []
-    with pymupdf.open(path) as document:
+    page_texts = []
+    with pymupdf.open(path, filetype="pdf") as document:
+        if not document.is_pdf or document.needs_pass:
+            raise ValueError("Expected an unlocked PDF")
         for number, page in enumerate(document, 1):
             words = [Word(*word[:5]) for word in page.get_text("words")]
+            page_texts.append("\n".join(" ".join(w.text for w in row) for row in lines(words)))
             if not words:
                 empty_pages.append(number)
             occurrences.extend(extract_page(words, page.rect.height, number, aliases))
+    return build_extraction_result(path, occurrences, empty_pages, aliases, raw_text="\n\n".join(page_texts))
+
+
+def build_extraction_result(path, occurrences, empty_pages, aliases=KEYWORD_ALIASES, *, raw_text=""):
+    """Normalize native and OCR page results into the same output contract."""
     fields = dict.fromkeys(dict.fromkeys((*FOCUS_FIELDS, *aliases)))
     for hit in occurrences:
         if fields[hit["field"]] is None and hit["value"]:
             fields[hit["field"]] = hit["value"]
     return {"source": str(path), "fields": fields, "occurrences": occurrences,
             "missing_focus_fields": [field for field in FOCUS_FIELDS if fields[field] is None],
-            "pages_without_text": empty_pages}
+            "pages_without_text": empty_pages, "raw_text": raw_text}
 
 
 def main() -> None:

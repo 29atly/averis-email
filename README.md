@@ -96,28 +96,42 @@ python -m averis_email.extraction_pipeline "path/to/document.pdf"
 ```
 
 Python API: `from averis_email.extraction_pipeline import extract_file`.
-`extract_file(path)` returns an `ExtractionResult` with detected file type,
+`extract_file(path)` returns an `ExtractionResult` with a validated routing plan,
 PDF type, selected route, status, page diagnostics, and extraction output.
 
-- `.pdf`: inspect every page for extractable text and image content. Text-based
-  PDFs (`epdf`) run the existing PDF extractor. Scanned or mixed PDFs go to the
-  OCR placeholder and return `NOT_IMPLEMENTED`.
-- `.xlsx` and `.txt`: recognized by extension, with explicit `NOT_IMPLEMENTED`
-  handlers. Their contents are not parsed yet.
-- Blank PDFs return `NEEDS_REVIEW`; missing, unsupported, corrupt, or
-  password-protected files return `ERROR`.
+- Contents determine PDF, DOCX/OOXML (including `.docs`), and XLSX types; renamed
+  documents record an extension mismatch. Plain text accepts UTF-8 or BOM-marked
+  UTF-16/32 using a `.txt` or extensionless filename.
+- PDF pages with usable embedded text use PyMuPDF. Scanned and ambiguous hybrid
+  pages use PaddleOCR. Mixed documents preserve native text on native pages.
+- Install OCR with `pip install -e '.[ocr]'`. Models initialize only when needed.
+  The default OCR adapter uses English; supply a configured engine through a
+  custom handler for other languages.
+- XLSX, DOCX/`.docs`, and TXT route to the built-in structured extractors:
+  adjacent spreadsheet cells, Word paragraphs/tables, and labeled text lines.
+  All adapters return field occurrences and `raw_text`.
+- Blank PDFs and pages without usable OCR output return `NEEDS_REVIEW`.
+  Missing, unsupported, corrupt, or password-protected files return `ERROR`,
+  with the more specific validation outcome in `result.plan`.
 
-Detection is a routing heuristic: a page dominated by an image (at least 50%
-of its area) with fewer than 20 text words needs OCR even if it has a text page
-number. PDFs with an existing usable OCR text layer may route as `epdf`. Blank
-pages do not force OCR. The heuristic does not guarantee text-layer completeness;
-thresholds live in `extraction_pipeline/detection.py`.
+Inspect without loading OCR or extracting fields:
 
-OCR, XLSX, and TXT extension points are in `extraction_pipeline/handlers.py`.
-Mixed PDFs are routed as a whole to OCR to avoid reporting partial extraction
-as complete. `EXTRACTED` means the extractor ran, not that every required field
-was found; inspect `extraction.missing_focus_fields`. This file-based pipeline is
-separate from the email comparison orchestrator.
+```bash
+python -m averis_email.extraction_pipeline document.pdf --inspect-only
+```
+
+Use `inspect_document(path)` followed by `execute_plan(path, plan)` to separate
+inspection from execution. Execution rejects a changed file and preserves the
+original plan. Page reasons explain image coverage, sparse text, and fallback
+choices. Detection thresholds remain heuristics requiring validation against
+your document corpus.
+
+See [routing contracts and custom extractors](docs/document-routing.md).
+`EXTRACTED` means the extractor ran, not that every required field was found;
+inspect `extraction.missing_focus_fields`. The email comparison pipeline uses
+`stages.ingestion.read_document(loader, attachment_path)` to load attachment
+bytes through this same router, then passes `raw_text` to its existing semantic
+field extractor. Review/error outcomes stop comparison as unreadable documents.
 
 The existing PDF-only command remains available:
 

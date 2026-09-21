@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pymupdf
 
 from averis_email.extraction_pipeline import extract_file
-from averis_email.stages.extraction import extract_pdf
+from averis_email.stages.pdf_extraction import extract_pdf
 
 
 class FileExtractionTests(unittest.TestCase):
@@ -46,12 +46,14 @@ class FileExtractionTests(unittest.TestCase):
                                 (['text', 'scan'], 'mixed')]:
             with self.subTest(kinds=kinds):
                 self.create_pdf(kinds)
-                with patch('averis_email.extraction_pipeline.handlers.extract_epdf') as digital:
+                with (patch('averis_email.extraction_pipeline.handlers.extract_epdf') as digital,
+                      patch('averis_email.extraction_pipeline.handlers.extract_with_ocr', return_value={}) as ocr):
                     result = extract_file(self.path)
                 self.assertEqual(result.pdf_type, expected)
                 self.assertEqual(result.route, 'ocr')
-                self.assertEqual(result.status, 'NOT_IMPLEMENTED')
-                self.assertIsNone(result.extraction)
+                self.assertEqual(result.status, 'EXTRACTED')
+                ocr.assert_called_once()
+                self.assertEqual(len(ocr.call_args.args[1].pages), len(kinds))
                 digital.assert_not_called()
                 self.path.unlink()
 
@@ -67,14 +69,18 @@ class FileExtractionTests(unittest.TestCase):
         self.assertEqual(result.pdf_type, 'empty')
         self.assertEqual(result.status, 'NEEDS_REVIEW')
 
-    def test_xlsx_and_txt_are_placeholders(self):
+    def test_xlsx_and_txt_use_registered_extractors(self):
         for extension in ['XLSX', 'txt']:
             path = self.path.with_suffix('.' + extension)
-            path.write_text('Placeholder input')
+            if extension == 'XLSX':
+                from openpyxl import Workbook
+                Workbook().save(path)
+            else:
+                path.write_text('Placeholder input')
             result = extract_file(path)
             self.assertEqual(result.route, extension.lower())
-            self.assertEqual(result.status, 'NOT_IMPLEMENTED')
-            self.assertIsNone(result.extraction)
+            self.assertEqual(result.status, 'EXTRACTED', result.message)
+            self.assertIsNotNone(result.extraction)
 
     def test_missing_directory_unsupported_and_corrupt_files(self):
         self.assertEqual(extract_file(self.path).status, 'ERROR')

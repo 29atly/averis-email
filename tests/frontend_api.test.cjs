@@ -11,6 +11,7 @@ async function boot(module, records, options = {}) {
       classList: { add() {}, remove() {} }, children: [], listeners: {},
       append(...items) { this.children.push(...items); }, prepend(item) { this.children.unshift(item); },
       replaceChildren(...items) { this.children = items; }, remove() {},
+      setAttribute() {}, removeAttribute() {}, querySelector() { return element("loading-status"); },
       querySelectorAll() { return []; }, addEventListener(name, listener) { this.listeners[name] = listener; } });
     return elements.get(id);
   }

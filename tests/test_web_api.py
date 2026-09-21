@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from averis_email import web
+from averis_email.manual_store import ManualStore
 from averis_email.schemas import FIELDS, ExtractedDoc, FieldValue, PipelineResult
 from averis_email.ui_api import StateStore
 
@@ -22,6 +23,7 @@ def api(tmp_path, monkeypatch):
     monkeypatch.setattr(inbox, 'emails', lambda: [deepcopy(email)])
     monkeypatch.setattr(web, 'INBOX', inbox)
     monkeypatch.setattr(web, 'STORE', StateStore(tmp_path / 'state.sqlite3'))
+    monkeypatch.setattr(web, 'MANUAL', ManualStore(tmp_path / 'manual'))
     si = ExtractedDoc(attachment_path='attachments/si.txt', fields={
         key: FieldValue(value='10' if key in ['container_count', 'gross_weight_kg'] else 'ACME',
                         source_file='attachments/si.txt', source_page=1, raw_text=f'{key}: original') for key in FIELDS})
@@ -162,3 +164,85 @@ def test_confirming_comparison_category_resumes_pipeline(api):
     assert response.json()['category'] == 'bl_comparison'
     assert response.json()['status'] == 'review'
     assert runner.call_args.kwargs == {'category_override': 'BL_COMPARISON'}
+
+
+def test_manual_case_is_created_pending_and_processed(api):
+    client, runner, _ = api
+    response = client.post('/cases', data={'subject': 'New shipment query', 'content': 'Please compare docs'},
+                           files=[('files', ('SI.txt', b'shipping instruction', 'text/plain')),
+                                  ('files', ('draft_BL.txt', b'bill of lading', 'text/plain'))])
+    assert response.status_code == 201, response.text
+    created = response.json()
+    assert created['status'] == 'pending'
+    assert created['subject'] == 'New shipment query'
+    assert len(created['attachments']) == 2
+    runner.assert_not_called()
+
+    listed = client.get('/cases').json()
+    assert listed[0]['id'] == created['id']
+
+    processed = client.post(f"/cases/{created['id']}/process").json()
+    assert runner.call_count == 1
+    assert processed['status'] == 'review'  # default mocked pipeline result needs review
+    # Idempotent: a second call reuses the cached result.
+    client.post(f"/cases/{created['id']}/process")
+    assert runner.call_count == 1
+
+
+def test_manual_case_requires_some_content(api):
+    client, _, _ = api
+    assert client.post('/cases', data={'subject': '', 'content': ''}).status_code == 422
+
+
+def test_manual_attachment_round_trips(api):
+    client, _, _ = api
+    created = client.post('/cases', data={'subject': 'Docs', 'content': ''},
+                          files=[('files', ('SI.txt', b'hello world', 'text/plain'))]).json()
+    assert created['attachments'][0]['path'] == f"manual/{created['id']}/SI.txt"
+    download = client.get(created['attachments'][0]['download_url'])
+    assert download.status_code == 200
+    assert download.content == b'hello world'
+    assert 'SI.txt' in download.headers['content-disposition']
+
+
+@pytest.mark.parametrize('filename,content', [
+    ('../../etc/passwd', b'data'),
+    ('bad.exe', b'data'),
+    ('fake.pdf', b'not a pdf'),
+    ('bad.txt', b'has\x00null'),
+])
+def test_manual_upload_rejects_unsafe_files(api, filename, content):
+    client, _, _ = api
+    before = [case['id'] for case in client.get('/cases').json()]
+    response = client.post('/cases', data={'subject': 'Docs', 'content': ''},
+                           files=[('files', (filename, content, 'application/octet-stream'))])
+    assert response.status_code == 422
+    assert [case['id'] for case in client.get('/cases').json()] == before
+
+
+def test_manual_upload_rejects_too_many_or_oversized_files(api):
+    client, _, _ = api
+    many = [('files', (f'file{i}.txt', b'x', 'text/plain')) for i in range(11)]
+    assert client.post('/cases', data={'subject': 'Docs'}, files=many).status_code == 422
+    huge = [('files', ('big.txt', b'x' * (10 * 1024 * 1024 + 1), 'text/plain'))]
+    assert client.post('/cases', data={'subject': 'Docs'}, files=huge).status_code == 413
+
+
+def test_manual_upload_rejects_duplicate_names(api):
+    client, _, _ = api
+    files = [('files', ('SI.txt', b'a', 'text/plain')), ('files', ('si.txt', b'b', 'text/plain'))]
+    assert client.post('/cases', data={'subject': 'Docs'}, files=files).status_code == 422
+
+
+def test_manual_attachment_path_is_scoped_to_its_case(api, monkeypatch):
+    """A record whose declared email_id doesn't match the owner id embedded
+    in its own attachment path (i.e. a forged/corrupted record) must not
+    be able to read another case's files."""
+    client, _, _ = api
+    owner = client.post('/cases', data={'subject': 'A'}, files=[('files', ('SI.txt', b'secret', 'text/plain'))]).json()
+    imposter_id = 'manual_' + 'f' * 12
+    monkeypatch.setattr(web.MANUAL, 'emails', lambda: [
+        {'email_id': imposter_id, 'from': 'x', 'to': [], 'subject': 'X', 'body': '',
+         'attachments': [f"manual/{owner['id']}/SI.txt"], 'received_at': ''}])
+    response = client.get(f'/emails/{imposter_id}/attachments/0')
+    assert response.status_code == 400

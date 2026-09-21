@@ -6,15 +6,26 @@
   <meta name="description" content="Shipping verification inbox and document comparison workflow.">
   <title>Work Queue · Shipping Mailroom</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%2308131d'/%3E%3Cpath d='M13 39h38l-6 10H20z' fill='%2328d7ba'/%3E%3Cpath d='M22 18h20v21H22z' fill='%23f3f5ee'/%3E%3Cpath d='M27 24h10M27 30h10' stroke='%2308131d' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="interface.css?v=2">
+  <script src="motion.js?v=1" defer></script>
 </head>
 <body data-module="inbox">
+  <a class="skip-link" href="#mainContent">Skip to content</a>
   <aside class="sidebar" id="sidebar"></aside>
   <div class="app-frame">
     <header class="topbar" id="topbar"></header>
-    <main class="module">
+    <main class="module" id="mainContent" tabindex="-1">
+      <div class="module-heading queue-heading">
+        <div><span class="kicker">Your shipping workspace</span><h1 id="queueTitle">Work queue</h1><p>Every shipment, checked. Every exception, in focus.</p></div>
+        <div class="module-actions">
+          <a class="secondary-button" href="review.html">Review exceptions <span aria-hidden="true">↗</span></a>
+          <button class="primary-button" type="button" id="composeButton"><span aria-hidden="true">+</span> Ingest Email</button>
+        </div>
+      </div>
+      <div class="queue-overview" aria-label="Queue overview" id="queueOverview"></div>
       <div class="mailbox-heading">
-        <div class="mailbox-tabs" aria-label="Work Queue filters">
+        <div class="mailbox-tabs" role="group" aria-label="Work Queue filters">
           <button class="active" data-filter="all">All emails</button>
           <button data-filter="bl_comparison">Bill of Lading Comparison</button>
           <button data-filter="si_request">Shipping Instruction Request</button>
@@ -22,17 +33,66 @@
           <button data-filter="general">General</button>
           <button data-filter="spam">Spam</button>
         </div>
-        <span class="mailbox-count" id="mailboxCount">0 messages</span>
+        <span class="mailbox-count" id="mailboxCount" role="status" aria-live="polite">0 messages</span>
       </div>
-      <div class="email-table" role="table" aria-label="Shipping email Work Queue">
-        <div class="email-header" role="row"><span></span><span>Sender</span><span>Subject and preview</span><span>Category</span><span>Processing result</span><span>Received</span></div>
+      <div class="bulk-bar" id="bulkBar" hidden>
+        <span class="bulk-status" id="bulkStatus" role="status" aria-live="polite">0 selected</span>
+        <div class="bulk-progress" id="bulkProgress" hidden>
+          <div class="progress"><div class="progress-fill" id="bulkProgressFill"></div></div>
+        </div>
+        <div class="button-row">
+          <button class="secondary-button" type="button" id="bulkStop" hidden>Stop</button>
+          <button class="secondary-button" type="button" id="bulkClear">Clear selection</button>
+          <button class="primary-button" type="button" id="bulkProcess">Process selected</button>
+        </div>
+      </div>
+      <div class="email-table" role="region" aria-label="Shipping email Work Queue">
+        <div class="email-header">
+          <span class="row-check"><input type="checkbox" id="selectAll" aria-label="Select all visible emails"></span>
+          <span>Sender</span><span>Subject and preview</span><span>Category</span><span>Processing result</span><span>Received</span>
+        </div>
         <div id="emailRows"></div>
       </div>
     </main>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="data.js?v=9"></script>
 
+  <dialog class="compose-dialog" id="composeDialog" aria-labelledby="composeTitle">
+    <form id="composeForm" novalidate>
+      <div class="compose-head">
+        <h2 id="composeTitle">Compose email</h2>
+        <button type="button" class="icon-button" id="composeClose" aria-label="Close compose form">✕</button>
+      </div>
+      <div class="compose-body">
+        <label class="field">
+          <span>Subject</span>
+          <input type="text" id="composeSubject" maxlength="300" placeholder="e.g. Shipping Instruction for booking 5AKR-61849" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>Content</span>
+          <textarea id="composeContent" rows="7" placeholder="Write or paste the email body…"></textarea>
+        </label>
+        <div class="field">
+          <span id="composeAttachLabel">Attachments</span>
+          <label class="file-drop" id="composeDrop" for="composeFiles">
+            <input type="file" id="composeFiles" multiple accept=".pdf,.xlsx,.txt,.docx,.docs" aria-labelledby="composeAttachLabel">
+            <span class="file-drop-copy"><strong>Drag files here</strong> or <u>browse</u></span>
+            <small>PDF, XLSX, TXT or DOCX — up to 10 MB each, 10 files max</small>
+          </label>
+          <ul class="file-chip-list" id="composeFileList"></ul>
+        </div>
+        <p class="compose-error" id="composeError" role="alert" hidden></p>
+      </div>
+      <div class="compose-foot">
+        <span class="compose-hint" id="composeHint">Processing can take up to a minute.</span>
+        <div class="button-row">
+          <button type="button" class="secondary-button" id="composeCancel">Cancel</button>
+          <button type="submit" class="primary-button" id="composeSubmit">Create and process</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
 
+  <script src="data.js?v=10"></script>
 </body>
 </html>

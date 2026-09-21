@@ -6,7 +6,7 @@
   const label = fieldDefinitions.find(([field]) => field === key)[1];
   const pair = item.values?.[key];
   document.getElementById('backToComparison').href = `comparison.html?case=${encodeURIComponent(item.id)}`;
-  document.getElementById('fieldTabs').innerHTML = fieldDefinitions.map(([field,name]) => `<a class="${field === key ? 'active' : ''}" href="evidence.html?case=${encodeURIComponent(item.id)}&field=${field}">${name}</a>`).join('');
+  document.getElementById('fieldTabs').innerHTML = fieldDefinitions.map(([field,name]) => `<a ${field === key ? 'aria-current="page"' : ''} class="${field === key ? 'active' : ''}" href="evidence.html?case=${encodeURIComponent(item.id)}&field=${field}">${name}</a>`).join('');
   if (!pair) {
     document.getElementById('evidenceContent').innerHTML = '<div class="empty">Source evidence is unavailable for this field.</div>'; return;
   }

@@ -19,6 +19,8 @@ populate the existing UI directly.
 | Retry | Toast only | `POST /cases/{id}/retry` runs the current pipeline synchronously |
 | Activity history and metrics | Fabricated stages, time and evidence coverage | Case response includes stored processing/review/retry events, measured duration and actual evidence coverage |
 | Empty/error states | UI assumed a populated demo inbox | Explicit empty screens and API errors; no automatic demo fallback |
+| Manually composed emails | Only bundle/HTTP inbox emails could be processed | `POST /cases` (multipart) persists a subject/content/attachments email; `POST /cases/{id}/process` runs the pipeline on it |
+| Bulk processing | One case at a time via the message view | UI selects multiple pending cases and calls `POST /cases/{id}/process` for each in sequence |
 
 The existing `/emails` response shape and submission fields are retained.
 `/emails/{id}` now shares cached results and corrections with the UI; use the
@@ -109,7 +111,35 @@ be mixed with field corrections or used when extracted documents already exist.
 
 Retry accepts no body, returns the updated case, and discards manual corrections
 in favor of fresh processing. Fix missing or unreadable attachments in the source
-bundle before retrying. Uploads and replacement files are not implemented.
+bundle before retrying.
+
+## Composing an email manually
+
+```http
+POST /cases
+Content-Type: multipart/form-data
+
+subject=Shipping Instruction for booking 5AKR-61849
+content=Please compare the attached SI and draft BL.
+files=SI.pdf
+files=draft_BL.pdf
+```
+
+Returns `201` with a `pending` case; the pipeline does not run inside this
+request (a slow classification call inside a file upload risks a client/proxy
+timeout losing the upload). Call `POST /cases/{id}/process` next — the same
+idempotent step `GET /cases/{id}` triggers on first access, exposed under its
+own name so bulk processing can call it explicitly without discarding
+corrections the way retry does.
+
+Attachments must be `.pdf`, `.xlsx`, `.txt`, `.docx` or `.docs`, at most 10 MB
+each and 25 MB total, at most 10 files, with unique names; content is checked
+against its extension (PDF magic bytes, DOCX/XLSX zip signature, no embedded
+NUL in `.txt`). Reject with `422` (`413` for size); accepted attachments keep
+their original filename, since `find_si_bl` identifies SI vs. draft BL from
+it. Manually composed emails are stored under `AVERIS_MANUAL_UPLOADS` (default
+`.cache/manual-uploads`), separate from `AVERIS_INBOX_SOURCE`, and are listed
+ahead of the configured inbox in `GET /cases`.
 
 ## State and scope
 

@@ -26,7 +26,7 @@
     </div>
     <div class="nav-label">Modules</div>
     <nav class="module-nav" aria-label="Application modules">
-      ${modules.map(item => `<a href="${item.href}" class="${navigationActive === item.id ? 'active' : ''}" ${navigationActive === item.id ? 'aria-current="page"' : ''}><span class="nav-icon" aria-hidden="true">${item.icon}</span><span>${item.label}</span>${item.count !== '' ? `<b>${item.count}</b>` : ''}</a>`).join('')}
+      ${modules.map(item => `<a aria-label="${item.label}" href="${item.href}" class="${navigationActive === item.id ? 'active' : ''}" ${navigationActive === item.id ? 'aria-current="page"' : ''}><span class="nav-icon" aria-hidden="true">${item.icon}</span><span>${item.label}</span>${item.count !== '' ? `<b>${item.count}</b>` : ''}</a>`).join('')}
     </nav>
     <div class="sidebar-profile">
       <div class="profile-avatar">DR</div>
@@ -36,7 +36,7 @@
   const topbar = document.getElementById('topbar');
   topbar.innerHTML = `
     <label class="global-search">
-      <span class="search-icon" aria-hidden="true">⌕</span>
+      <span class="search-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg></span>
       <span class="sr-only">Search emails and shipping documents</span>
       <input id="globalSearch" type="search" placeholder="Search emails and shipping documents" autocomplete="off">
     </label>
@@ -79,9 +79,9 @@
       const fieldName = key => fieldDefinitions.find(([field]) => field === key)?.[1] || titleCase(key);
       const inputs = reviewItem.canConfirmValues ? reviewFields.map(key => ['si', 'bl'].map((side, index) => {
         const value = reviewItem.values[key][index];
-        return `<div><label>${side.toUpperCase()} · ${escapeHTML(fieldName(key))}</label><p>${escapeHTML(value.source_text || 'No source text available')}</p><input data-side="${side}" data-review-field="${key}" value="${escapeHTML(value.normalized == null ? '' : value.raw)}" required></div>`;
+        return `<div><label for="review-${side}-${key}">${side.toUpperCase()} · ${escapeHTML(fieldName(key))}</label><p>${escapeHTML(value.source_text || 'No source text available')}</p><input id="review-${side}-${key}" data-side="${side}" data-review-field="${key}" value="${escapeHTML(value.normalized == null ? '' : value.raw)}" required></div>`;
       }).join('')).join('') : '';
-      const categoryInput = !reviewItem.siFile && !reviewItem.blFile ? `<label>Confirm classification<select id="reviewCategory"><option value="">Choose category</option>${Object.entries(window.ShippingStore.categoryLabels).filter(([key]) => key !== 'unclassified').map(([key, label]) => `<option value="${key.toUpperCase()}">${escapeHTML(label)}</option>`).join('')}</select></label>` : '';
+      const categoryInput = !reviewItem.siFile && !reviewItem.blFile ? `<label>Confirm classification<select id="reviewCategory" required><option value="">Choose category</option>${Object.entries(window.ShippingStore.categoryLabels).filter(([key]) => key !== 'unclassified').map(([key, label]) => `<option value="${key.toUpperCase()}">${escapeHTML(label)}</option>`).join('')}</select></label>` : '';
       detail.innerHTML = `<div class="case-banner"><div><span class="kicker">${escapeHTML(reviewItem.id)} · Decision needed</span><h2>${escapeHTML(reviewItem.subject)}</h2></div></div><div class="review-detail"><div class="review-alert"><h2>Why this needs you</h2><p>${escapeHTML(reviewItem.reviewReason)}</p></div><form class="review-form" id="reviewForm"><div class="review-fields">${inputs}${categoryInput}</div><div class="button-row">${inputs || categoryInput ? '<button class="primary-button" type="submit">Confirm and continue</button>' : ''}<a class="secondary-button" href="message.html?case=${encodeURIComponent(reviewItem.id)}">View original email and attachments</a><button class="secondary-button" type="button" id="retryButton">Retry processing</button></div></form></div>`;
       document.getElementById('reviewForm').addEventListener('submit', async event => {
         event.preventDefault();

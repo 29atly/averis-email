@@ -5,15 +5,18 @@
   <meta name="description" content="Inspect shipping verification processing stages and operational status.">
   <title>Activity History · Shipping Mailroom</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%2308131d'/%3E%3Cpath d='M13 39h38l-6 10H20z' fill='%2328d7ba'/%3E%3Cpath d='M22 18h20v21H22z' fill='%23f3f5ee'/%3E%3Cpath d='M27 24h10M27 30h10' stroke='%2308131d' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="interface.css?v=2">
+  <script src="motion.js?v=1" defer></script>
 </head>
 <body data-module="activity">
+  <a class="skip-link" href="#mainContent">Skip to content</a>
   <aside class="sidebar" id="sidebar"></aside>
-  <div class="app-frame"><header class="topbar" id="topbar"></header><main class="module">
+  <div class="app-frame"><header class="topbar" id="topbar"></header><main class="module" id="mainContent" tabindex="-1">
     <div class="module-heading"><div><span class="kicker">Processing record</span><h1>Activity History</h1><p>Inspect processing stages, exceptions, evidence linking, and reviewer decisions.</p></div><div class="module-actions"><label class="sr-only" for="caseSelect">Select case</label><select class="select-case" id="caseSelect"></select></div></div>
     <div class="activity-grid"><section class="surface"><div class="case-banner"><div><span class="kicker" id="activityCase"></span><h2>Processing timeline</h2></div><span class="pill teal" id="activityStatus">Complete</span></div><div class="timeline" id="timeline"></div></section><aside class="metric-stack" id="activityMetrics"></aside></div>
   </main></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="data.js?v=9"></script>
+  <script src="data.js?v=10"></script>
 </body>
 </html>

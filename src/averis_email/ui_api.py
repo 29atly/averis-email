@@ -121,6 +121,44 @@ class StateStore:
                        (email['email_id'], self.fingerprint(email), json.dumps(state)))
 
 
+def _parse_stamp(stamp):
+    if not stamp:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(stamp).replace('Z', '+00:00'))
+    except ValueError:
+        return None
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone().replace(tzinfo=None)
+    return parsed
+
+
+def _short_time(stamp):
+    """Compact received-at label for the narrow work-queue column."""
+    parsed = _parse_stamp(stamp)
+    if parsed is None:
+        return str(stamp)
+    days = (datetime.now().date() - parsed.date()).days
+    if days == 0:
+        return parsed.strftime('%H:%M')
+    if days == 1:
+        return 'Yesterday'
+    if 0 < days < 7:
+        return parsed.strftime('%A')
+    return f'{parsed.day} {parsed.strftime("%b")}'
+
+
+def _received_label(stamp):
+    """Fuller received-at label for detail views, e.g. 'Yesterday at 16:27'."""
+    parsed = _parse_stamp(stamp)
+    if parsed is None:
+        return str(stamp)
+    days = (datetime.now().date() - parsed.date()).days
+    if days == 0:
+        return parsed.strftime('%H:%M')
+    return f'{_short_time(stamp)} at {parsed.strftime("%H:%M")}'
+
+
 def event(title, detail, warning=False):
     return dict(timestamp=datetime.now(timezone.utc).isoformat(), title=title,
                 detail=detail, warning=warning)
@@ -150,7 +188,7 @@ def to_case(email, state=None):
         recipient = ', '.join(recipient)
     case = Case(id=email['email_id'], subject=email.get('subject') or '',
                 sender=email.get('from') or '', recipient=recipient,
-                body=email.get('body') or '', time=str(stamp), receivedLabel=str(stamp),
+                body=email.get('body') or '', time=_short_time(stamp), receivedLabel=_received_label(stamp),
                 attachments=[Attachment(name=Path(path).name, path=path,
                     download_url=f"/emails/{quote(email['email_id'], safe='')}/attachments/{i}")
                     for i, path in enumerate(email.get('attachments') or []) if isinstance(path, str)])

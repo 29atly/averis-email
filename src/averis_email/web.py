@@ -11,13 +11,14 @@ from urllib.parse import quote, unquote
 from urllib.error import URLError
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from averis_email.data_loader import Inbox
+from averis_email.manual_store import CompositeLoader, ManualStore, ManualUploadError
 from averis_email.orchestrator import run_pipeline
 from averis_email.schemas import FieldValue, PipelineResult
 from averis_email.stages import comparison, validation
@@ -27,6 +28,7 @@ load_dotenv()
 app = FastAPI(title='Averis Email Pipeline API')
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'])
 INBOX = Inbox(os.getenv('AVERIS_INBOX_SOURCE', 'data'))
+MANUAL = ManualStore(os.getenv('AVERIS_MANUAL_UPLOADS', '.cache/manual-uploads'))
 STORE = StateStore(os.getenv('AVERIS_UI_STATE', '.cache/ui-state.sqlite3'), namespace=INBOX.source)
 LOCK = RLock()
 
@@ -39,12 +41,15 @@ class EmailSummary(BaseModel):
 
 
 def emails():
+    manual = MANUAL.emails()
     try:
         records = INBOX.emails()
-        if not records and not INBOX.is_http and not (Path(INBOX.source) / 'inbox').is_dir():
+        if not records and not manual and not INBOX.is_http and not (Path(INBOX.source) / 'inbox').is_dir():
             raise HTTPException(503, 'Inbox not configured: set AVERIS_INBOX_SOURCE to the folder containing inbox/ and attachments/.')
-        return records
+        return manual + records
     except (OSError, ValueError, URLError) as exc:
+        if manual:
+            return manual
         raise HTTPException(503, 'Inbox source is unavailable') from exc
 
 
@@ -57,9 +62,10 @@ def find_email(email_id):
 
 def process(email, previous=None, category_override=None):
     started = perf_counter()
+    loader = CompositeLoader(INBOX, MANUAL)
     try:
-        result = (run_pipeline(INBOX, email, category_override=category_override)
-                  if category_override else run_pipeline(INBOX, email))
+        result = (run_pipeline(loader, email, category_override=category_override)
+                  if category_override else run_pipeline(loader, email))
     except Exception:
         result = PipelineResult(email_id=email['email_id'], category='GENERAL', status='NEEDS_REVIEW',
                                 review_reason='unreadable', error='Pipeline failed. Check server configuration and retry.')
@@ -92,6 +98,18 @@ def get_email_result(email_id: str):
         return PipelineResult.model_validate(state['result'])
 
 
+def _validate_inbox_path(path):
+    parsed = PurePosixPath(path)
+    if (parsed.is_absolute() or '..' in parsed.parts or '\\' in path or
+            unquote(path) != path or '?' in path or '#' in path or
+            not parsed.parts or parsed.parts[0] != 'attachments'):
+        raise HTTPException(400, 'invalid attachment path')
+    if not INBOX.is_http:
+        root = (Path(INBOX.source) / 'attachments').resolve()
+        if not (Path(INBOX.source) / path).resolve().is_relative_to(root):
+            raise HTTPException(400, 'invalid attachment path')
+
+
 @app.get('/emails/{email_id}/attachments/{attachment_index}')
 def get_original_attachment(email_id: str, attachment_index: int):
     # Resolve only attachments belonging to this email; never accept a client path.
@@ -102,21 +120,20 @@ def get_original_attachment(email_id: str, attachment_index: int):
     path = attachments[attachment_index]
     if not isinstance(path, str):
         raise HTTPException(400, 'invalid attachment path')
-    parsed = PurePosixPath(path)
-    if (parsed.is_absolute() or '..' in parsed.parts or '\\' in path or
-            unquote(path) != path or '?' in path or '#' in path or
-            not parsed.parts or parsed.parts[0] != 'attachments'):
-        raise HTTPException(400, 'invalid attachment path')
-    if not INBOX.is_http:
-        root = (Path(INBOX.source) / 'attachments').resolve()
-        if not (Path(INBOX.source) / path).resolve().is_relative_to(root):
-            raise HTTPException(400, 'invalid attachment path')
+    is_manual = path.startswith('manual/')
+    if not is_manual:
+        _validate_inbox_path(path)
     try:
-        content = INBOX.read_bytes(path)
+        if is_manual:
+            content = MANUAL.read_bytes(path, email_id=email_id)
+        else:
+            content = INBOX.read_bytes(path)
     except (OSError, URLError) as exc:
         raise HTTPException(404, 'attachment unavailable') from exc
+    except ValueError as exc:
+        raise HTTPException(400, 'invalid attachment path') from exc
     return Response(content, media_type=mimetypes.guess_type(path)[0] or 'application/octet-stream',
-                    headers={'Content-Disposition': f"attachment; filename*=UTF-8''{quote(parsed.name, safe='')}",
+                    headers={'Content-Disposition': f"attachment; filename*=UTF-8''{quote(PurePosixPath(path).name, safe='')}",
                              'X-Content-Type-Options': 'nosniff'})
 
 
@@ -135,10 +152,28 @@ def list_cases(q: str = '', category: str | None = None, status: str | None = No
 
 
 @app.get('/cases/{email_id}', response_model=Case)
+@app.post('/cases/{email_id}/process', response_model=Case)
 def get_case(email_id: str):
+    """GET processes on first access; POST .../process is the same idempotent
+    step under a name the bulk-processing UI can call explicitly. Neither
+    discards saved human corrections the way retry does."""
     with LOCK:
         email = find_email(email_id)
         return to_case(email, STORE.get(email) or process(email))
+
+
+@app.post('/cases', response_model=Case, status_code=201)
+def create_case(subject: str = Form(''), content: str = Form(''), files: list[UploadFile] = File(default=[])):
+    """Persist a manually composed email. Does not run the pipeline: a slow
+    classification call inside this request would risk losing the upload to
+    a client/proxy timeout. Call POST /cases/{id}/process afterward."""
+    with LOCK:
+        try:
+            uploaded = [(f.filename, f.file.read()) for f in files]
+            record = MANUAL.create(subject, content, uploaded)
+        except ManualUploadError as exc:
+            raise HTTPException(exc.status_code, str(exc)) from exc
+        return to_case(record, None)
 
 
 @app.post('/cases/{email_id}/retry', response_model=Case)

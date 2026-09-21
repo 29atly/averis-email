@@ -3,11 +3,15 @@
   const params = new URLSearchParams(location.search);
   const base = (window.AVERIS_API_URL || (location.pathname.startsWith('/ui/') ? location.origin : 'http://localhost:8000')).replace(/\/$/, '');
   const main = document.querySelector('main');
-  const loading = document.createElement('p');
-  loading.textContent = 'Loading emails…';
+  const loading = document.createElement('div');
+  loading.className = 'loading-state';
+  loading.innerHTML = '<p role="status">Loading your mailroom…</p><div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div><div class="skeleton" aria-hidden="true"></div>';
+  main.setAttribute('aria-busy', 'true');
   main.prepend(loading);
   async function request(path, options = {}) {
-    const response = await fetch(base + path, { ...options, headers: { 'Content-Type': 'application/json', ...options.headers } });
+    const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+    const headers = isFormData ? { ...options.headers } : { 'Content-Type': 'application/json', ...options.headers };
+    const response = await fetch(base + path, { ...options, headers });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
       throw new Error(typeof body.detail === 'string' ? body.detail : `Request failed (${response.status})`);
@@ -34,7 +38,7 @@
     if (module === 'review' && selected?.status !== 'review') selected = cases.find(item => item.status === 'review');
     if (['comparison', 'evidence'].includes(module) && selected?.category !== 'bl_comparison') selected = cases.find(item => item.category === 'bl_comparison');
     if (selected && module !== 'inbox') {
-      loading.textContent = 'Processing email and loading its result…';
+      loading.querySelector('p').textContent = 'Processing email and loading its result…';
       const detail = await request(`/cases/${encodeURIComponent(selected.id)}`);
       cases[cases.findIndex(item => item.id === detail.id)] = detail;
       selectCase(detail.id);
@@ -47,8 +51,11 @@
       getDifferences: item => fieldDefinitions.filter(([key]) => item.defectFields?.includes(key)),
       downloadURL: path => base + path,
       review: (id, payload) => request(`/cases/${encodeURIComponent(id)}/review`, { method: 'POST', body: JSON.stringify(payload) }),
-      retry: id => request(`/cases/${encodeURIComponent(id)}/retry`, { method: 'POST' }) };
+      retry: id => request(`/cases/${encodeURIComponent(id)}/retry`, { method: 'POST' }),
+      create: formData => request('/cases', { method: 'POST', body: formData }),
+      process: id => request(`/cases/${encodeURIComponent(id)}/process`, { method: 'POST' }) };
     loading.remove();
+    main.removeAttribute('aria-busy');
     await script('app.js');
     if (!selected && !['inbox', 'review'].includes(module)) {
       main.innerHTML = '<div class="empty">No case is available for this view. <a href="index.html">Open the work queue</a>.</div>';
@@ -56,10 +63,12 @@
       await script(`${module}.js`);
     }
   } catch (error) {
+    main.removeAttribute('aria-busy');
+    main.classList.add('error-state');
     main.replaceChildren();
     const title = document.createElement('h2'); title.textContent = 'Unable to load the mailroom';
     const detail = document.createElement('p'); detail.textContent = error.message || 'Check the API connection.';
-    const retry = document.createElement('button'); retry.textContent = 'Try again'; retry.onclick = () => location.reload();
+    const retry = document.createElement('button'); retry.textContent = 'Try again'; retry.className = 'primary-button'; retry.onclick = () => location.reload();
     main.append(title, detail, retry);
   }
 })();

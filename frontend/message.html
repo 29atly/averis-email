@@ -6,16 +6,19 @@
   <meta name="description" content="Read a shipping email and inspect its automated processing result.">
   <title>Email · Shipping Mailroom</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%2317243a'/%3E%3Cpath d='M13 39h38l-6 10H20z' fill='%231769d2'/%3E%3Cpath d='M22 18h20v21H22z' fill='%23fff'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="interface.css?v=2">
+  <script src="motion.js?v=1" defer></script>
 </head>
 <body data-module="message">
+  <a class="skip-link" href="#messageContent">Skip to content</a>
   <aside class="sidebar" id="sidebar"></aside>
   <div class="app-frame">
     <header class="topbar" id="topbar"></header>
-    <main class="module" id="messageContent"></main>
+    <main class="module" id="messageContent" tabindex="-1"></main>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="data.js?v=9"></script>
+  <script src="data.js?v=10"></script>
 
 
 </body>

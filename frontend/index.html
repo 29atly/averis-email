@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Shipping verification inbox and document comparison workflow.">
+  <title>Work Queue · Shipping Mailroom</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='15' fill='%2308131d'/%3E%3Cpath d='M13 39h38l-6 10H20z' fill='%2328d7ba'/%3E%3Cpath d='M22 18h20v21H22z' fill='%23f3f5ee'/%3E%3Cpath d='M27 24h10M27 30h10' stroke='%2308131d' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css?v=8">
+</head>
+<body data-module="inbox">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="app-frame">
+    <header class="topbar" id="topbar"></header>
+    <main class="module">
+      <div class="mailbox-heading">
+        <div class="mailbox-tabs" aria-label="Work Queue filters">
+          <button class="active" data-filter="all">All emails</button>
+          <button data-filter="bl_comparison">Bill of Lading Comparison</button>
+          <button data-filter="si_request">Shipping Instruction Request</button>
+          <button data-filter="invoice_query">Invoice Query</button>
+          <button data-filter="general">General</button>
+          <button data-filter="spam">Spam</button>
+        </div>
+        <span class="mailbox-count" id="mailboxCount">0 messages</span>
+      </div>
+      <div class="email-table" role="table" aria-label="Shipping email Work Queue">
+        <div class="email-header" role="row"><span></span><span>Sender</span><span>Subject and preview</span><span>Category</span><span>Processing result</span><span>Received</span></div>
+        <div id="emailRows"></div>
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="data.js?v=7"></script>
+  <script src="app.js?v=7"></script>
+  <script src="inbox.js?v=7"></script>
+</body>
+</html>

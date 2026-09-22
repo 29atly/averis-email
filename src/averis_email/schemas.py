@@ -6,9 +6,11 @@ writes real stage logic -- it's the contract everything else plugs into.
 """
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 CATEGORIES = ["BL_COMPARISON", "SI_REQUEST", "INVOICE_QUERY", "GENERAL", "SPAM"]
+# REVIEW is a system outcome, never a model-predicted intent.
+RESULT_CATEGORIES = [*CATEGORIES, "REVIEW"]
 STATUSES = ["OK", "MISMATCH", "NEEDS_REVIEW"]
 
 # The 4 review reasons the evaluation format actually accepts (per your
@@ -98,10 +100,15 @@ class PipelineResult(BaseModel):
     diff_detail: dict[str, Any] = Field(default_factory=dict)
     error: Optional[str] = None
 
+    @computed_field
+    @property
+    def review_required(self) -> bool:
+        return self.status == "NEEDS_REVIEW"
+
     def to_submission_entry(self) -> dict:
-        """Exactly the shape sample_submission.json expects."""
+        """Export the legacy five-intent contract; REVIEW stays unresolved via status."""
         return {
-            "category": self.category,
+            "category": "GENERAL" if self.category == "REVIEW" else self.category,
             "status": self.status,
             "review_reason": self.review_reason,
             "has_defect": self.has_defect,

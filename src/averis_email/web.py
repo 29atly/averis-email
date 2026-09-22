@@ -159,7 +159,7 @@ def process(email, previous=None, category_override=None, attachment_override=No
     try:
         result = run_pipeline(loader, email, **kwargs)
     except Exception:
-        result = PipelineResult(email_id=email['email_id'], category='GENERAL', status='NEEDS_REVIEW',
+        result = PipelineResult(email_id=email['email_id'], category='REVIEW', status='NEEDS_REVIEW',
                                 review_reason='unreadable', error='Pipeline failed. Check server configuration and retry.')
     state = dict(result=result.model_dump(mode='json'), duration=perf_counter() - started,
                  revision=STORE.next_revision(email),

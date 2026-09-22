@@ -220,6 +220,12 @@ def to_case(email, state=None):
         return case
     result = PipelineResult.model_validate(state['result'])
     case.category = result.category.lower()
+    # Older saved classification failures used GENERAL as a placeholder.
+    if (result.category == 'GENERAL' and result.status == 'NEEDS_REVIEW'
+            and ('classification' in result.diff_detail
+                 or (result.review_context and result.review_context.stage == 'classification')
+                 or (result.error and result.error.startswith('classify failed:')))):
+        case.category = 'review'
     case.status = 'review' if result.status == 'NEEDS_REVIEW' else 'complete'
     case.processingTime = f"{state['duration']:.2f}s"
     case.revision = state['revision']

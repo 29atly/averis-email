@@ -112,5 +112,8 @@ def classify_email(email: dict, env_file=".env") -> ClassificationDecision:
     decision = get_classifier(mode, str(env_file))(email)
     if not decision.review_required and decision.category not in CATEGORIES:
         raise ValueError("Classifier returned an unsupported category")
+    if decision.review_required:
+        # Preserve the backend's raw category/reason in details for diagnosis.
+        decision.category = "REVIEW"
     decision.details = {**decision.details, "mode": mode.value}
     return decision

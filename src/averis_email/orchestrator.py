@@ -39,14 +39,13 @@ def run_pipeline(loader, email: dict, *, category_override: str | None = None,
             category_override = 'BL_COMPARISON'
         decision = ClassificationDecision(category_override) if category_override else classify_email(email)
     except Exception as e:
-        return result(email_id=eid, category="GENERAL", status="NEEDS_REVIEW",
+        return result(email_id=eid, category="REVIEW", status="NEEDS_REVIEW",
                                review_reason="unreadable", error=f"classify failed: {e}")
 
     if decision.review_required:
-        # The submission contract requires a category and one of four reasons.
-        # Keep the actual abstention (including null category and detailed reason)
-        # in diff_detail; GENERAL is only the legacy submission placeholder.
-        return result(email_id=eid, category="GENERAL", status="NEEDS_REVIEW",
+        # Keep classification failures distinct from accepted GENERAL emails.
+        # Raw backend diagnostics remain available in diff_detail.
+        return result(email_id=eid, category="REVIEW", status="NEEDS_REVIEW",
                               review_reason="unreadable",
                               diff_detail={"classification": decision.details})
 

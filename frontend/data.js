@@ -32,7 +32,7 @@
       }
     }
     const fieldDefinitions = [['shipper', 'Shipper'], ['consignee', 'Consignee'], ['notify_party', 'Notify party'], ['port_of_loading', 'Port of loading'], ['port_of_discharge', 'Port of discharge'], ['container_count', 'Container count'], ['gross_weight_kg', 'Gross weight']];
-    const categoryLabels = { unclassified: 'Not processed', bl_comparison: 'Bill of Lading Comparison', si_request: 'Shipping Instruction Request', invoice_query: 'Invoice Query', general: 'General', spam: 'Spam' };
+    const categoryLabels = { unclassified: 'Not processed', bl_comparison: 'Bill of Lading Comparison', si_request: 'Shipping Instruction Request', invoice_query: 'Invoice Query', general: 'General', review: 'REVIEW', spam: 'Spam' };
     const getSelectedId = () => params.get('case') || localStorage.getItem('selectedCase');
     const getCase = (id = getSelectedId()) => cases.find(item => item.id === id) || cases[0];
     const selectCase = id => localStorage.setItem('selectedCase', id);

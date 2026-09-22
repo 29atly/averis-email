@@ -14,6 +14,18 @@ from averis_email.settings_store import GmailSettingsStore
 from averis_email.ui_api import StateStore
 
 
+@pytest.mark.parametrize(('configured', 'expected'), [
+    ('', 60),
+    ('60s', 60),
+    ('invalid', 60),
+    ('0', 1),
+    ('15', 15),
+])
+def test_gmail_poll_interval_is_safe(monkeypatch, configured, expected):
+    monkeypatch.setenv('AVERIS_GMAIL_POLL_INTERVAL', configured)
+    assert web._gmail_poll_interval() == expected
+
+
 @pytest.fixture
 def api(tmp_path, monkeypatch):
     # Unit/API tests must never start a real background IMAP connection.

@@ -109,3 +109,12 @@ def test_corrupt_file_falls_back_to_defaults(store):
     store.path.parent.mkdir(parents=True, exist_ok=True)
     store.path.write_text('not json')
     assert store.public()['configured'] is False
+
+
+@pytest.mark.parametrize('contents', ['[]', 'null', '"invalid"', '{"password": 123}'])
+def test_invalid_file_structure_falls_back_to_defaults(store, contents):
+    store.path.parent.mkdir(parents=True, exist_ok=True)
+    store.path.write_text(contents)
+    assert store.get()['password'] is None
+    assert store.public() == {'address': None, 'configured': False, 'enabled': False,
+                              'last_poll_at': None, 'last_error': None, 'ingested_count': 0}

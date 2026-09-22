@@ -8,6 +8,7 @@ import json
 import mimetypes
 import os
 from pathlib import Path, PurePosixPath
+import sys
 from threading import Condition, RLock
 from time import perf_counter
 from urllib.parse import quote, unquote
@@ -74,6 +75,14 @@ def _gmail_poll_allowed():
     return os.getenv('AVERIS_GMAIL_POLL', '1').strip().lower() not in {'0', 'false', 'no', 'off'}
 
 
+def _gmail_poll_interval():
+    """Return a safe polling interval even when deployment config is invalid."""
+    try:
+        return max(1, int(os.getenv('AVERIS_GMAIL_POLL_INTERVAL', '60').strip()))
+    except (AttributeError, ValueError):
+        return 60
+
+
 def _publish_poll(outcome):
     EVENTS.publish({'type': 'gmail_sync', 'status': outcome.status,
                     'ingested': outcome.ingested, 'skipped': outcome.skipped})
@@ -85,7 +94,7 @@ def _start_gmail_poller():
         return False
     if GMAIL_POLLER and GMAIL_POLLER.running:
         return False
-    interval = int(os.getenv('AVERIS_GMAIL_POLL_INTERVAL', '60'))
+    interval = _gmail_poll_interval()
     GMAIL_POLLER = GmailPoller(GMAIL_SETTINGS, GMAIL_STORE, interval=interval,
                                on_change=_publish_poll)
     return GMAIL_POLLER.start()
@@ -401,7 +410,13 @@ def review_case(email_id: str, request: ReviewRequest):
         return to_case(email, state)
 
 
-# Keep API routes above the mount. Installed packages may omit repository assets.
-FRONTEND = Path(__file__).resolve().parents[2] / 'frontend'
+# Keep API routes above the mount. Source checkouts keep frontend/ at the
+# repository root; wheels install it beneath the active Python prefix.
+_FRONTEND_CANDIDATES = (
+    Path(__file__).resolve().parents[2] / 'frontend',
+    Path(sys.prefix) / 'frontend',
+)
+FRONTEND = next((path for path in _FRONTEND_CANDIDATES if path.is_dir()),
+                _FRONTEND_CANDIDATES[0])
 if FRONTEND.is_dir():
     app.mount('/ui', StaticFiles(directory=FRONTEND, html=True), name='frontend')

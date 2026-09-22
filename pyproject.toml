@@ -32,3 +32,11 @@ averis-classify-email = "averis_email.llm_classifier.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.data-files]
+frontend = [
+    "frontend/*.html",
+    "frontend/*.js",
+    "frontend/*.css",
+    "frontend/README.md",
+]

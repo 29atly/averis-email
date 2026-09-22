@@ -45,8 +45,12 @@ class GmailSettingsStore:
                 data = json.loads(self.path.read_text())
             except (OSError, ValueError):
                 return dict(DEFAULTS)
+            if not isinstance(data, dict):
+                return dict(DEFAULTS)
             data = {**DEFAULTS, **data}
             if data.get('password'):
+                if not isinstance(data['password'], str):
+                    return dict(DEFAULTS)
                 data['password'] = normalize_app_password(data['password'])
             return data
 

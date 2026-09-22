@@ -1,18 +1,20 @@
 """Extract required fields from SI and BL document text."""
 
+import json
 import os
 import re
+import ssl
+import certifi
 from typing import Optional
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
 from pydantic import BaseModel, Field
 
 from averis_email.schemas import ExtractedDoc, FieldValue, FIELDS
 
 
-# Load GEMINI_API_KEY from .env 
 load_dotenv()
 
 
@@ -76,8 +78,8 @@ FIELD_LABELS = {
 }
 
 
-# These fields contain semantic text.
-# Even when rules find a non-empty value, Gemini reviews these fields
+# Semantic text fields should be reviewed by the LLM even if
+# deterministic extraction already found a value.
 SEMANTIC_TEXT_FIELDS = {
     "shipper",
     "consignee",
@@ -87,7 +89,8 @@ SEMANTIC_TEXT_FIELDS = {
 }
 
 
-# Party fields should contain the party/company name only rather than the full address.
+# Party fields should contain the company / party name rather than
+# a full postal address.
 PARTY_FIELDS = {
     "shipper",
     "consignee",
@@ -95,7 +98,7 @@ PARTY_FIELDS = {
 }
 
 
-# Build the label list once.
+# Build known label list once
 LABEL_ENTRIES = []
 
 for _field, _labels in FIELD_LABELS.items():
@@ -104,16 +107,18 @@ for _field, _labels in FIELD_LABELS.items():
             (_field, _label)
         )
 
-# Longer labels should be checked first.
+
+# Longer labels must be checked first.
 LABEL_ENTRIES.sort(
     key=lambda item: len(item[1]),
     reverse=True,
 )
 
 
-# Gemini structured output
-class GeminiField(BaseModel):
-    """One field reviewed or extracted by Gemini."""
+
+# Structured NVIDIA result
+class LLMField(BaseModel):
+    """One field reviewed or extracted by NVIDIA."""
 
     value: Optional[str] = Field(
         default=None,
@@ -139,19 +144,162 @@ class GeminiField(BaseModel):
     )
 
 
-class GeminiExtraction(BaseModel):
-    """Structured Gemini result for the seven required fields."""
+class LLMExtraction(BaseModel):
+    """Structured NVIDIA result for the seven required fields."""
 
-    shipper: Optional[GeminiField] = None
-    consignee: Optional[GeminiField] = None
-    notify_party: Optional[GeminiField] = None
-    port_of_loading: Optional[GeminiField] = None
-    port_of_discharge: Optional[GeminiField] = None
-    container_count: Optional[GeminiField] = None
-    gross_weight_kg: Optional[GeminiField] = None
+    shipper: Optional[LLMField] = None
+    consignee: Optional[LLMField] = None
+    notify_party: Optional[LLMField] = None
+    port_of_loading: Optional[LLMField] = None
+    port_of_discharge: Optional[LLMField] = None
+    container_count: Optional[LLMField] = None
+    gross_weight_kg: Optional[LLMField] = None
 
 
-def _empty_fields(source_file: str) -> dict:
+# ---------------------------------------------------------------------
+# NVIDIA provider used only by extraction
+# ---------------------------------------------------------------------
+
+class NvidiaExtractionProvider:
+    """Small NVIDIA client used only for document extraction."""
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str,
+        base_url: str = "https://integrate.api.nvidia.com/v1",
+        timeout: int = 120,
+    ):
+        self.api_key = api_key
+        self.model = model
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+
+    def complete(
+        self,
+        system: str,
+        text: str,
+    ) -> str:
+        """Send a chat-completion request to NVIDIA."""
+
+        url = f"{self.base_url}/chat/completions"
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system,
+                },
+                {
+                    "role": "user",
+                    "content": text,
+                },
+            ],
+            "temperature": 0,
+            "max_tokens": 2048,
+            "stream": False,
+        }
+
+        request = Request(
+            url,
+            data=json.dumps(
+                payload
+            ).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            method="POST",
+        )
+
+        ssl_context = ssl.create_default_context(
+            cafile=certifi.where()
+        )
+
+        try:
+            with urlopen(
+                request,
+                timeout=self.timeout,
+                context=ssl_context,
+            ) as response:
+
+                response_text = response.read().decode(
+                    "utf-8"
+                )
+
+        except HTTPError as exc:
+
+            error_body = exc.read().decode(
+                "utf-8",
+                errors="replace",
+            )
+
+            raise RuntimeError(
+                f"NVIDIA HTTP {exc.code}: {error_body}"
+            ) from exc
+
+        except URLError as exc:
+
+            raise RuntimeError(
+                f"NVIDIA connection failed: {exc.reason}"
+            ) from exc
+
+        except TimeoutError as exc:
+
+            raise RuntimeError(
+                "NVIDIA request timed out."
+            ) from exc
+
+        try:
+            response_data = json.loads(
+                response_text
+            )
+
+        except json.JSONDecodeError as exc:
+
+            raise RuntimeError(
+                "NVIDIA returned an invalid API response: "
+                f"{response_text}"
+            ) from exc
+
+        try:
+            message = response_data[
+                "choices"
+            ][0]["message"]
+
+            result_text = message.get(
+                "content",
+                "",
+            )
+
+        except (
+            KeyError,
+            IndexError,
+            TypeError,
+        ) as exc:
+
+            raise RuntimeError(
+                "Unexpected NVIDIA response structure: "
+                f"{response_data}"
+            ) from exc
+
+        if not result_text:
+            raise RuntimeError(
+                "NVIDIA returned an empty response."
+            )
+
+        return result_text.strip()
+
+
+# ---------------------------------------------------------------------
+# Empty field structure
+# ---------------------------------------------------------------------
+
+def _empty_fields(
+    source_file: str,
+) -> dict:
     """Create empty FieldValue objects for all required fields."""
 
     return {
@@ -165,20 +313,33 @@ def _empty_fields(source_file: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------
+# Deterministic extraction helpers
+# ---------------------------------------------------------------------
+
 def _annotation_pattern() -> str:
     """Allow optional annotations following a field label."""
 
     return r"(?:\s*\([^)]*\))*"
 
 
-def _match_field_label(line: str):
+def _match_field_label(
+    line: str,
+):
     """Check whether a line starts with a required field label."""
 
     annotation = _annotation_pattern()
 
     for field, label in LABEL_ENTRIES:
-        escaped = re.escape(label)
 
+        escaped = re.escape(
+            label
+        )
+
+        # Example:
+        # Port of Loading: PORT KLANG
+        # Load Port | PORT KLANG
+        # Load Port - PORT KLANG
         pattern = (
             rf"^\s*{escaped}"
             rf"{annotation}"
@@ -197,7 +358,8 @@ def _match_field_label(line: str):
                 match.group(1).strip(),
             )
 
-
+        # Example:
+        # Port of Loading PORT KLANG
         pattern = (
             rf"^\s*{escaped}"
             rf"{annotation}"
@@ -216,6 +378,10 @@ def _match_field_label(line: str):
                 match.group(1).strip(),
             )
 
+        # Example:
+        #
+        # Port of Loading
+        # PORT KLANG
         pattern = (
             rf"^\s*{escaped}"
             rf"{annotation}"
@@ -232,7 +398,9 @@ def _match_field_label(line: str):
     return None
 
 
-def _looks_like_other_label(line: str) -> bool:
+def _looks_like_other_label(
+    line: str,
+) -> bool:
     """Check whether a line appears to start another document field."""
 
     stripped = line.strip()
@@ -240,7 +408,9 @@ def _looks_like_other_label(line: str) -> bool:
     if not stripped:
         return False
 
-    if _match_field_label(stripped) is not None:
+    if _match_field_label(
+        stripped
+    ) is not None:
         return True
 
     return bool(
@@ -254,7 +424,9 @@ def _looks_like_other_label(line: str) -> bool:
     )
 
 
-def _is_separator_line(line: str) -> bool:
+def _is_separator_line(
+    line: str,
+) -> bool:
     """Return True for empty or separator lines."""
 
     stripped = line.strip()
@@ -270,7 +442,10 @@ def _is_separator_line(line: str) -> bool:
     )
 
 
-def _clean_rule_value(field: str, value: str,) -> str:
+def _clean_rule_value(
+    field: str,
+    value: str,
+) -> str:
     """Clean structural formatting without normalizing field meaning."""
 
     value = value.strip()
@@ -295,21 +470,28 @@ def _clean_rule_value(field: str, value: str,) -> str:
     return value
 
 
-def _find_next_value_line(lines: list[str], start_index: int,):
+def _find_next_value_line(
+    lines: list[str],
+    start_index: int,
+):
     """Find the next usable line after a label-only line."""
 
     j = start_index
 
     while j < len(lines):
+
         candidate = lines[j]
 
-        # Skip blank/separator lines.
-        if _is_separator_line(candidate):
+        if _is_separator_line(
+            candidate
+        ):
             j += 1
             continue
 
-        # Another field started before a value was found.
-        if _looks_like_other_label(candidate):
+        # Another field has started before a value was found.
+        if _looks_like_other_label(
+            candidate
+        ):
             return None, j
 
         return candidate.strip(), j
@@ -317,20 +499,12 @@ def _find_next_value_line(lines: list[str], start_index: int,):
     return None, j
 
 
-def _is_ambiguous_weight_heading(field: str, line: str, first_value: str,) -> bool:
-    """Avoid treating a table heading as total gross weight.
-
-    Example:
-
-        CONTAINER NO.   DESCRIPTION   GROSS WEIGHT (KG)
-
-    followed by individual container weights.
-
-    A generic Gross Weight heading with no value should therefore
-    be left unresolved. Gemini can later locate the shipment total.
-
-    Explicit TOTAL Gross Weight labels are allowed.
-    """
+def _is_ambiguous_weight_heading(
+    field: str,
+    line: str,
+    first_value: str,
+) -> bool:
+    """Avoid treating a table heading as total gross weight."""
 
     if field != "gross_weight_kg":
         return False
@@ -340,13 +514,19 @@ def _is_ambiguous_weight_heading(field: str, line: str, first_value: str,) -> bo
 
     upper = line.upper()
 
+    # Explicit TOTAL labels can be trusted.
     if "TOTAL" in upper:
         return False
 
+    # A generic heading such as GROSS WEIGHT (KG) with no value may only be a table column heading.
     return True
 
 
-def _extract_with_rules(raw_text: str, source_file: str,) -> dict:
+# Deterministic extraction
+def _extract_with_rules(
+    raw_text: str,
+    source_file: str,
+) -> dict:
     """Extract fields using deterministic field-label rules."""
 
     extracted = _empty_fields(
@@ -371,12 +551,12 @@ def _extract_with_rules(raw_text: str, source_file: str,) -> dict:
 
         field, first_value = matched
 
-        # Keep first successfully extracted occurrence.
+        # Keep the first successfully extracted occurrence.
         if extracted[field].value:
             i += 1
             continue
 
-        # Avoid using a PDF table heading as total weight.
+        # Avoid using a table heading as the shipment total weight.
         if _is_ambiguous_weight_heading(
             field,
             line,
@@ -431,11 +611,12 @@ def _extract_with_rules(raw_text: str, source_file: str,) -> dict:
     return extracted
 
 
-# Determine what Gemini needs to inspect
+
+# Determine what NVIDIA should inspect
 def _find_missing(
     extracted: dict,
 ) -> list[str]:
-    """Return fields that rules did not extract."""
+    """Return fields that deterministic rules did not extract."""
 
     missing = []
 
@@ -448,20 +629,26 @@ def _find_missing(
         if (
             field_data is None
             or field_data.value is None
-            or str(
+            or not str(
                 field_data.value
-            ).strip() == ""
+            ).strip()
         ):
-            missing.append(field)
+            missing.append(
+                field
+            )
 
     return missing
 
 
-def _fields_for_gemini(extracted: dict,) -> list[str]:
-    """Return fields Gemini should inspect."""
+def _fields_for_llm(
+    extracted: dict,
+) -> list[str]:
+    """Return fields NVIDIA should inspect."""
 
     missing = set(
-        _find_missing(extracted)
+        _find_missing(
+            extracted
+        )
     )
 
     review = []
@@ -472,13 +659,18 @@ def _fields_for_gemini(extracted: dict,) -> list[str]:
             field in SEMANTIC_TEXT_FIELDS
             or field in missing
         ):
-            review.append(field)
+            review.append(
+                field
+            )
 
     return review
 
 
+
 # Evidence verification
-def _normalize_whitespace(text: str,) -> str:
+def _normalize_whitespace(
+    text: str,
+) -> str:
     """Collapse whitespace for reliable evidence checking."""
 
     return re.sub(
@@ -488,8 +680,11 @@ def _normalize_whitespace(text: str,) -> str:
     ).strip()
 
 
-def _evidence_exists(raw_text: str, evidence: Optional[str],) -> bool:
-    """Check whether Gemini evidence exists in the document."""
+def _evidence_exists(
+    raw_text: str,
+    evidence: Optional[str],
+) -> bool:
+    """Check whether NVIDIA evidence actually exists in the document."""
 
     if not evidence:
         return False
@@ -508,10 +703,16 @@ def _evidence_exists(raw_text: str, evidence: Optional[str],) -> bool:
     )
 
 
-def _evidence_supports_value(evidence: Optional[str], value: Optional[str],) -> bool:
-    """Check whether evidence contains the value being reviewed."""
+def _evidence_supports_value(
+    evidence: Optional[str],
+    value: Optional[str],
+) -> bool:
+    """Check whether evidence contains the extracted value."""
 
-    if not evidence or value is None:
+    if (
+        not evidence
+        or value is None
+    ):
         return False
 
     evidence_text = _normalize_whitespace(
@@ -528,47 +729,126 @@ def _evidence_supports_value(evidence: Optional[str], value: Optional[str],) -> 
     )
 
 
-# Gemini extraction / semantic review
-def _extract_with_gemini(
+
+# JSON response cleaning
+def _clean_json_response(
+    result_text: str,
+) -> str:
+    """Remove optional Markdown code fences around NVIDIA JSON."""
+
+    result_text = result_text.strip()
+
+    if result_text.startswith("```"):
+
+        result_text = re.sub(
+            r"^```(?:json)?\s*",
+            "",
+            result_text,
+            flags=re.IGNORECASE,
+        )
+
+        result_text = re.sub(
+            r"\s*```$",
+            "",
+            result_text,
+        )
+
+    return result_text.strip()
+
+
+
+# NVIDIA semantic fallback
+def _extract_with_nvidia(
     raw_text: str,
     fields_to_review: list[str],
-) -> Optional[GeminiExtraction]:
-    """Use Gemini for missing fields and semantic placeholder checking."""
+) -> Optional[LLMExtraction]:
+    """Use NVIDIA for semantic extraction and placeholder detection."""
 
     api_key = os.getenv(
-        "GEMINI_API_KEY"
+        "NVIDIA_EXTRACTION_API_KEY"
+    )
+
+    # Prefer an extraction-specific model.
+    # Otherwise use the team's NVIDIA model if one is configured.
+    model = (
+        os.getenv(
+            "NVIDIA_EXTRACTION_MODEL"
+        )
+        or os.getenv(
+            "NVIDIA_MODEL"
+        )
+    )
+
+    base_url = (
+        os.getenv(
+            "NVIDIA_EXTRACTION_BASE_URL"
+        )
+        or os.getenv(
+            "NVIDIA_BASE_URL"
+        )
+        or "https://integrate.api.nvidia.com/v1"
     )
 
     if not api_key:
-        return None
+        raise ValueError(
+            "NVIDIA_EXTRACTION_API_KEY is not set."
+        )
 
-    client = genai.Client(
-        api_key=api_key
+    if not model:
+        raise ValueError(
+            "Set NVIDIA_EXTRACTION_MODEL or NVIDIA_MODEL."
+        )
+
+    provider = NvidiaExtractionProvider(
+        api_key=api_key,
+        model=model,
+        base_url=base_url,
+        timeout=120,
     )
 
     prompt = f"""
-You are reviewing fields from a Shipping Instruction (SI)
+You are extracting information from a Shipping Instruction (SI)
 or Bill of Lading (BL).
 
-Only use information explicitly present in the document.
+Only use information explicitly written in the document.
+
+The document may use different wording for the same concept.
+
+Examples:
+- "Departure Location" may mean port_of_loading.
+- "Arrival Harbor" may mean port_of_discharge.
+- "Equipment Count" may mean container_count.
+- "Total Cargo Mass" may mean gross_weight_kg.
+
+These examples are only guidance.
+Use the meaning of the document text.
 
 Do not guess.
 Do not invent information.
-Do not infer a missing value from unrelated information.
+Do not infer a value that is not written in the document.
 Do not compare this document with another document.
-Do not normalize ports, weights, or container values.
+Do not normalize extracted values.
 
-You have two jobs:
+You need to review these fields:
 
-1. Extract a field if its real value is present.
-2. Detect when text is only a placeholder or means that the real value
-   is not yet known.
+{", ".join(fields_to_review)}
 
-A field is unresolved when the document contains wording that means
-the real value has not been provided yet.
+For every reviewed field return:
 
-Examples include, but are NOT limited to:
+1. value
+   The actual value explicitly written in the document.
+   Return null when there is no genuine value.
 
+2. evidence
+   The exact text from the document supporting the result.
+   Do not rewrite or paraphrase the evidence.
+   Return null if there is no relevant text.
+
+3. unresolved
+   true when the real value is unavailable or the document only contains
+   a placeholder.
+
+Examples of unresolved wording include:
 - N/A
 - TBD
 - TBA
@@ -582,98 +862,143 @@ Examples include, but are NOT limited to:
 - will advise
 - to follow
 - not available
-- blank placeholders
-- underscores
-- question marks
 
-These examples are not an exhaustive list.
-
-Use the meaning of the wording to decide whether the field contains
-a genuine value or merely indicates that the value is unavailable.
+This list is not exhaustive.
 
 Important:
-- Do NOT mark a genuine company name or genuine port name unresolved.
-- Do NOT mark normal shipping terminology unresolved merely because
-  it sounds unusual.
-- Be conservative. Only mark unresolved=True when the wording clearly
-  indicates that the real value is missing or not yet known.
+- Do not mark a genuine company name unresolved.
+- Do not mark a genuine port name unresolved.
+- Be conservative.
+- Only use unresolved=true when the wording clearly means that the
+  real value is missing or not yet known.
 
-For shipper, consignee, and notify_party:
+For shipper, consignee and notify_party:
 - return only the party/company name.
 - do not include the postal address.
 - preserve the company name as written.
 
-For port_of_loading and port_of_discharge:
-- return the actual port/location as written.
-- if the document only says something like "TO BE ADVISED",
-  return value=null and unresolved=true.
+For port_of_loading:
+- return the actual departure/loading port or location as written.
+
+For port_of_discharge:
+- return the actual arrival/discharge port or location as written.
 
 For container_count:
 - preserve the complete expression as written.
-- example: "15 x 20'GP".
+- example: "3 x 40FT Containers".
 
 For gross_weight_kg:
-- extract the TOTAL gross weight for the shipment.
+- extract the TOTAL shipment gross weight.
 - do not use an individual container weight.
 - preserve the value and unit as written.
 
-For every field:
-- evidence must be an exact quote from the document.
-- if a genuine value is present:
-    unresolved=false
-    value=<actual value>
-- if the field is clearly a placeholder or unresolved:
-    unresolved=true
-    value=null
-- if the field does not appear at all:
-    unresolved=true
-    value=null
-    evidence=null
+Return ONLY valid JSON.
 
-Only review these fields:
+Use this exact JSON structure:
 
-{", ".join(fields_to_review)}
+{{
+  "shipper": {{
+    "value": null,
+    "evidence": null,
+    "unresolved": false
+  }},
+  "consignee": {{
+    "value": null,
+    "evidence": null,
+    "unresolved": false
+  }},
+  "notify_party": {{
+    "value": null,
+    "evidence": null,
+    "unresolved": false
+  }},
+  "port_of_loading": {{
+    "value": null,
+    "evidence": null,
+    "unresolved": false
+  }},
+  "port_of_discharge": {{
+    "value": null,
+    "evidence": null,
+    "unresolved": false
+  }},
+  "container_count": {{
+    "value": null,
+    "evidence": null,
+    "unresolved": false
+  }},
+  "gross_weight_kg": {{
+    "value": null,
+    "evidence": null,
+    "unresolved": false
+  }}
+}}
+
+For fields that are NOT in the review list, their values may remain null.
 
 DOCUMENT:
 
 {raw_text}
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.5-flash-lite",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0,
-            response_mime_type="application/json",
-            response_schema=GeminiExtraction,
+    result_text = provider.complete(
+        system=(
+            "Extract structured fields from shipping documents. "
+            "Return only valid JSON and no additional explanation."
         ),
+        text=prompt,
     )
 
-    return response.parsed
+    result_text = _clean_json_response(
+        result_text
+    )
+
+    try:
+        result_json = json.loads(
+            result_text
+        )
+
+    except json.JSONDecodeError as exc:
+
+        raise RuntimeError(
+            "NVIDIA returned invalid JSON: "
+            f"{result_text}"
+        ) from exc
+
+    try:
+        return LLMExtraction.model_validate(
+            result_json
+        )
+
+    except Exception as exc:
+
+        raise RuntimeError(
+            "NVIDIA JSON does not match the expected extraction structure: "
+            f"{result_json}"
+        ) from exc
 
 
-# ---------------------------------------------------------------------
-# Apply verified Gemini results
-# ---------------------------------------------------------------------
 
-def _apply_gemini_result(
+# Apply verified NVIDIA results
+
+def _apply_llm_result(
     extracted: dict,
-    gemini_result: GeminiExtraction,
+    llm_result: LLMExtraction,
     fields_to_review: list[str],
     raw_text: str,
     source_file: str,
 ) -> None:
-    """Apply Gemini results without blindly trusting the model."""
+    """Apply NVIDIA results without blindly trusting the model."""
 
     for field in fields_to_review:
 
-        gemini_field = getattr(
-            gemini_result,
+        llm_field = getattr(
+            llm_result,
             field,
             None,
         )
 
-        if gemini_field is None:
+        if llm_field is None:
             continue
 
         current = extracted.get(
@@ -682,24 +1007,27 @@ def _apply_gemini_result(
 
         current_value = (
             current.value
-            if isinstance(current, FieldValue)
+            if isinstance(
+                current,
+                FieldValue,
+            )
             else None
         )
 
-        evidence = (
-            gemini_field.evidence
-        )
+        evidence = llm_field.evidence
 
 
-        # CASE 1: Rules already found a value.
+        # Rules already found a value.
         if (
             current_value is not None
-            and str(current_value).strip()
+            and str(
+                current_value
+            ).strip()
         ):
 
             if (
                 field in SEMANTIC_TEXT_FIELDS
-                and gemini_field.unresolved
+                and llm_field.unresolved
                 and _evidence_exists(
                     raw_text,
                     evidence,
@@ -717,13 +1045,14 @@ def _apply_gemini_result(
                     raw_text=evidence,
                 )
 
-            # Keep the value found by the rules.
+            # Otherwise keep deterministic result.
             continue
 
-        # CASE 2: Rule extraction could not find a value.
-        if gemini_field.unresolved:
 
-            # Preserve evidence if Gemini found an explicit placeholder.
+        # Rules did not find a value and NVIDIA says it is unresolved.
+        if llm_field.unresolved:
+
+            # Preserve explicit placeholder evidence where available.
             if (
                 evidence
                 and _evidence_exists(
@@ -741,30 +1070,34 @@ def _apply_gemini_result(
 
             continue
 
+        # Rules missed the field and NVIDIA returned a real value.
+
         if (
-            gemini_field.value is None
+            llm_field.value is None
             or not str(
-                gemini_field.value
+                llm_field.value
             ).strip()
         ):
             continue
 
+        # The quoted evidence must really exist in the document.
         if not _evidence_exists(
             raw_text,
             evidence,
         ):
             continue
 
+        # The returned value must also be present inside that evidence.
         if not _evidence_supports_value(
             evidence,
-            gemini_field.value,
+            llm_field.value,
         ):
             continue
 
         value = _clean_rule_value(
             field,
             str(
-                gemini_field.value
+                llm_field.value
             ),
         )
 
@@ -779,11 +1112,17 @@ def _apply_gemini_result(
         )
 
 
+# ---------------------------------------------------------------------
 # Public extraction function
-def extract_fields(doc: ExtractedDoc,) -> ExtractedDoc:
+# ---------------------------------------------------------------------
+
+def extract_fields(
+    doc: ExtractedDoc,
+) -> ExtractedDoc:
     """Extract the seven required shipping fields from one document."""
 
-    # If ingestion already marked the document unreadable, extraction should not continue.
+    # If ingestion already marked the document unreadable,
+    # extraction should stop here.
     if not doc.readable:
         return doc
 
@@ -792,7 +1131,10 @@ def extract_fields(doc: ExtractedDoc,) -> ExtractedDoc:
     )
 
     if (
-        not isinstance(raw_text, str)
+        not isinstance(
+            raw_text,
+            str,
+        )
         or not raw_text.strip()
     ):
 
@@ -812,33 +1154,39 @@ def extract_fields(doc: ExtractedDoc,) -> ExtractedDoc:
 
         return doc
 
+    # Deterministic extraction using known labels.
+
     extracted = _extract_with_rules(
         raw_text,
         doc.attachment_path,
     )
 
+    # Determine which fields NVIDIA should inspect.
 
-
-    fields_to_review = _fields_for_gemini(
+    fields_to_review = _fields_for_llm(
         extracted
     )
 
-
-
+    # NVIDIA semantic fallback.
     if fields_to_review:
 
         try:
 
-            gemini_result = _extract_with_gemini(
+            nvidia_result = _extract_with_nvidia(
                 raw_text,
                 fields_to_review,
             )
 
-            if gemini_result is not None:
+            if nvidia_result is not None:
 
-                _apply_gemini_result(
+                # -------------------------------------------------
+                # Step 4:
+                # Verify NVIDIA output against source evidence.
+                # -------------------------------------------------
+
+                _apply_llm_result(
                     extracted=extracted,
-                    gemini_result=gemini_result,
+                    llm_result=nvidia_result,
                     fields_to_review=fields_to_review,
                     raw_text=raw_text,
                     source_file=doc.attachment_path,
@@ -846,13 +1194,12 @@ def extract_fields(doc: ExtractedDoc,) -> ExtractedDoc:
 
         except Exception as exc:
 
-
+            # Rules still survive even if NVIDIA fails.
             doc.error = (
-                "Gemini extraction fallback failed: "
+                "NVIDIA extraction fallback failed: "
                 f"{exc}"
             )
 
     doc.fields = extracted
 
     return doc
-

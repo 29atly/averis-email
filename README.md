@@ -26,7 +26,7 @@ repetitive and error-prone.
 
 A missed discrepancy can lead to document corrections, shipment delays and extra
 operational work. The same field may also use different labels or formatting across
-documents—for example, `Port of Loading` and `Load Port`—so direct text matching is
+documentsâ€”for example, `Port of Loading` and `Load Port`â€”so direct text matching is
 not sufficient.
 
 ## What AveriFY does
@@ -38,13 +38,17 @@ not sufficient.
    - Invoice Query
    - General
    - Spam
-3. Resolves which attachments are the SI and draft BL.
+3. For BL comparison requests, resolves which attachments are the SI and draft BL.
 4. Reads PDF, scanned PDF, DOCX, XLSX and TXT documents.
 5. Extracts and normalizes seven shipment fields.
 6. Compares the SI and BL deterministically.
 7. Shows matches and discrepancies alongside source evidence.
 8. Escalates missing, unreadable or uncertain cases for human review.
 9. Records corrections, retries and processing activity.
+
+Unresolved classification produces the system category **REVIEW**, rather than
+pretending the message was successfully classified as General. REVIEW is not a
+sixth intent predicted by the models.
 
 The comparison covers:
 
@@ -69,9 +73,11 @@ flowchart TD
     C[Live Gmail inbox via read-only IMAP] --> D
 
     D --> E[Email classification cascade]
-    E -->|Other category| F[Classify and finish]
+    E -->|Accepted non-comparison intent| F[Classify and finish]
+    E -->|Unresolved classification| O[Human review]
     E -->|BL comparison| G[SI and BL attachment resolution]
 
+    G -->|Missing or ambiguous attachments| O
     G --> H[Document inspection and routing]
     H --> I[Native PDF text / DOCX / XLSX / TXT]
     H --> J[PaddleOCR for scanned pages]
@@ -84,7 +90,8 @@ flowchart TD
 
     M -->|Missing or uncertain| O[Human review]
     N -->|Match or mismatch| P[Result and source evidence]
-    O -->|Correction or retry| N
+    O -->|Retry classification or source processing| E
+    O -->|Confirm extracted values| N
 
     D <--> Q[(SQLite case and review state)]
     D <--> R[(Local attachment and inbox stores)]
@@ -120,6 +127,32 @@ Each classifier returns one of the five allowed categories or an explicit review
 outcome. Invalid, empty or ambiguous results are not silently converted into a
 confident prediction; the original decision details are retained for reviewers.
 
+| Outcome | Pipeline category | Pipeline status | `review_required` |
+| --- | --- | --- | --- |
+| Accepted ordinary correspondence | `GENERAL` | `null` (UI: complete) | `false` |
+| Accepted SI request, invoice query or spam | Respective intent | `null` (UI: complete) | `false` |
+| Classification fails or remains uncertain | `REVIEW` | `NEEDS_REVIEW` | `true` |
+| BL comparison cannot resolve attachments or document data | `BL_COMPARISON` | `NEEDS_REVIEW` | `true` |
+| Completed document comparison | `BL_COMPARISON` | `OK` or `MISMATCH` | `false` |
+
+`CATEGORIES` defines the five prediction intents; `RESULT_CATEGORIES` additionally
+includes `REVIEW`. `PipelineResult.review_required` is derived from its status.
+The UI displays REVIEW for identifiable older classification failures saved with
+GENERAL as a placeholder. Human reviewers choose an actual intent, not REVIEW.
+
+For organiser submissions only, `to_submission_entry()` maps REVIEW to the legacy
+GENERAL placeholder while retaining `NEEDS_REVIEW` and the review reason. This
+preserves the five-category export contract; it is not an accepted General decision.
+
+### Attachment identification
+
+The current pipeline's `find_si_bl()` identifies SI and BL roles from filenames.
+It requires exactly one candidate for each role; missing, unknown or ambiguous
+candidates go to review. It does not establish document readability or verify
+contents. The subsequent document reader inspects the actual file format.
+Missing attachments do not change an email's intent, and accepted non-comparison
+emails finish without attachment checks.
+
 ### 2. Live Gmail ingestion
 
 A dedicated Gmail inbox can be connected through read-only IMAP using a Google app
@@ -143,9 +176,9 @@ OCR only where needed.
 
 ### 4. Field extraction and source traceability
 
-Known field labels are handled with deterministic extraction rules. When a required
-field is missing or semantically difficult, the latest extraction stage can ask an
-NVIDIA model to inspect only the unresolved fields. Model output is validated against
+Known field labels are handled with deterministic extraction rules. The extraction
+stage can ask an NVIDIA model to inspect missing fields and semantic text fields
+(such as parties and ports), including values already found by the rules. Model output is validated against
 the expected schema and checked against text that actually exists in the document
 before it is accepted.
 
@@ -251,7 +284,7 @@ returned malformed output.
 We addressed this with a cascade: deterministic rules handle clear cases, Laya can
 rank the five intents locally, and hosted models provide a final fallback. Low
 confidence or invalid output goes to human review. For document fields, deterministic
-rules remain primary and NVIDIA is used only for unresolved semantic cases. The
+rules remain primary and NVIDIA reviews missing values and semantic text fields. The
 system validates structured model output and checks its evidence against the source
 text before using it.
 
@@ -327,6 +360,8 @@ changes during integration.
 
 ### Installation
 
+macOS/Linux:
+
 ```bash
 git clone https://github.com/29atly/averis-email.git
 cd averis-email
@@ -335,6 +370,17 @@ source .venv/bin/activate
 pip install -e .
 cp .env.example .env
 ```
+
+Windows PowerShell (from the repository folder):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+```
+
+Use the virtual environment's Python for subsequent commands. Keep an existing
+`.env`; do not overwrite your credentials when updating the project.
 
 Optional local model and OCR dependencies:
 
@@ -345,7 +391,9 @@ pip install -e '.[ocr]'
 
 ### Configuration
 
-Set the organiser data directory in `.env`:
+Set `AVERIS_INBOX_SOURCE` to the extracted directory that directly contains
+`inbox/` and `attachments/` (not the ZIP file), or the organiser HTTP service URL.
+For example, in `.env`:
 
 ```dotenv
 AVERIS_INBOX_SOURCE="/absolute/path/to/sdoc-hackathon-bundle/data_v2"
@@ -357,12 +405,22 @@ NVIDIA_MODEL="your-model-id"
 
 The application also supports Gemini and Hugging Face. See `.env.example` for the
 complete configuration. Never commit real API keys or Gmail app passwords.
+Email classification and NVIDIA document extraction have separate settings;
+the extraction code accepts `NVIDIA_EXTRACTION_API_KEY`,
+`NVIDIA_EXTRACTION_MODEL` and `NVIDIA_EXTRACTION_BASE_URL` overrides. These
+optional overrides are not currently listed in `.env.example`.
 
 ### Start the application
 
 ```bash
 source .venv/bin/activate
 uvicorn averis_email.web:app --reload --port 8000
+```
+
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn averis_email.web:app --reload --port 8000
 ```
 
 Open:
@@ -392,6 +450,21 @@ Available modes:
 | `laya` | Local option scoring with confidence thresholds |
 | `llm` | Selected hosted provider only |
 
+In `cascade` mode, rules must explicitly match an intent; an unmatched message
+continues to Laya and then the hosted provider if needed. In `rule_based` mode,
+unmatched text defaults to GENERAL. These modes therefore differ for unfamiliar
+messages. A casual invitation is not guaranteed to match a deterministic rule.
+
+Laya requires the optional `.[laya]` installation and a downloaded checkpoint.
+Its default acceptance gates are probability >= 0.80, margin >= 0.20, and action
+probability >= 0.50 (ties require review). Provider/model failures or exhausted
+fallbacks remain review outcomes, not successful General classifications.
+
+Restart the backend after changing `.env` or model settings; classifier instances
+are cached. Retry previously processed emails to replace their saved results.
+Refresh an already-open message page after reprocessing. Local changes must also
+be deployed and the remote service restarted to affect the cloud demo.
+
 For detailed classifier configuration, see
 [LLM classifier setup](docs/llm-classifier.md) and
 [Laya classifier setup](docs/laya-classifier.md).
@@ -410,14 +483,42 @@ contracts and custom handlers.
 
 ## Verification
 
+Install the test tools in the same environment first (they are not installed by
+`pip install -e .`).
+
 ```bash
-.venv/bin/python -m pytest tests/ -q --ignore=tests/read_pdf_examples.py
+python -m pip install pytest httpx
+python -m pytest tests/ -q --ignore=tests/read_pdf_examples.py
 node --test tests/frontend_api.test.cjs
 ```
 
 The tests cover classification, document routing, native extraction, OCR adapters,
 normalization, comparison, Gmail synchronization, persistence, review flows, API
-contracts and frontend data hydration.
+contracts and frontend data hydration. The full suite includes pytest fixtures;
+`unittest discover` alone is not a substitute for running the whole suite.
+
+Focused checks in Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_review_category.py" -v
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_classifier_selection.py" -v
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_synthetic_fallback.py" -v
+```
+
+The synthetic fallback test uses mocked model inference by default. To exercise
+real local Laya (the initial run may download model files):
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[laya]"
+$env:RUN_LAYA_INTEGRATION = "1"
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p "test_synthetic_fallback.py" -v
+Remove-Item Env:RUN_LAYA_INTEGRATION
+```
+
+The demonstration checks that rules do not match, Laya accepts BL_COMPARISON,
+and no hosted LLM is called. Its email was selected using real model trials;
+it demonstrates one successful fallback, not accuracy on unseen emails. The
+original fixture remains unchanged. Thresholds are not lowered to pass the test.
 
 ## Repository Layout
 
